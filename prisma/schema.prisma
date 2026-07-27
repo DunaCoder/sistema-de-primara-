@@ -1,0 +1,119 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ==========================================
+// 1. ARCHIVOS MAESTROS
+// ==========================================
+
+model Usuario {
+  idUsuario Int     @id @default(autoincrement()) @map("id_usuario")
+  username  String  @unique
+  password  String  // Almacenará el hash de la clave
+  rol       String  // ENUM en texto: 'Admin', 'Secretaria', 'Docente', 'Nomina'
+  estado    Boolean @default(true) // Activo / Inactivo
+
+  personal  Personal[] // Relación 1:1 opcional con Personal
+
+  @@map("usuarios")
+}
+
+model Representante {
+  idRepresentante String   @id @map("id_representante") // Cédula / DNI como PK
+  nombre          String
+  apellido        String
+  telefono        String
+  direccion       String   @db.Text
+
+  alumnos         Alumno[]
+
+  @@map("representantes")
+}
+
+model Alumno {
+  idAlumno           String        @id @map("id_alumno") // Cédula escolar o ID interno
+  nombre             String
+  apellido           String
+  fechaNacimiento    DateTime      @map("fecha_noticia") @db.Date
+  idRepresentante    String        @map("id_representante")
+  expedienteCompleto Boolean       @default(false) @map("expediente_completo")
+
+  representante      Representante @relation(fields: [idRepresentante], references: [idRepresentante], onDelete: Restrict)
+  inscripciones      Inscripcion[]
+
+  @@map("alumnos")
+}
+
+model Personal {
+  idPersonal   String   @id @map("id_personal") // Cédula / DNI
+  nombre       String
+  apellido     String
+  cargo        String   // 'Docente', 'Directivo', 'Obrero', 'Administrativo'
+  sueldoBase   Float    @map("sueldo_base")
+  fechaIngreso DateTime @map("fecha_ingreso") @db.Date
+  idUsuario    Int?     @unique @map("id_usuario") // 1:1 Opcional por si no usa el sistema
+
+  usuario           Usuario?            @relation(fields: [idUsuario], references: [idUsuario], onDelete: SetNull)
+  gradosSecciones   GradoSeccion[]
+  movimientosNomina MovimientoNomina[]
+
+  @@map("personal")
+}
+
+model GradoSeccion {
+  idGradoSeccion Int    @id @default(autoincrement()) @map("id_grado_seccion")
+  grado          String // Ej: "1er Grado", "2do Grado"
+  seccion        String // Ej: "A", "B"
+  idDocenteGuia  String @map("id_docente_guia")
+
+  docenteGuia    Personal      @relation(fields: [idDocenteGuia], references: [idPersonal], onDelete: Restrict)
+  inscripciones  Inscripcion[]
+
+  @@map("grados_secciones")
+}
+
+// ==========================================
+// 2. ARCHIVOS TRANSACCIONALES
+// ==========================================
+
+model Inscripcion {
+  idInscripcion  Int      @id @default(autoincrement()) @map("id_inscripcion")
+  idAlumno       String   @map("id_alumno")
+  idGradoSeccion Int      @map("id_grado_seccion")
+  anoEscolar     String   @map("ano_escolar") // Ej: "2025-2026"
+  fechaInscripcion DateTime @default(now()) @map("fecha_inscripcion") @db.Date
+
+  alumno                 Alumno                  @relation(fields: [idAlumno], references: [idAlumno], onDelete: Cascade)
+  gradoSeccion           GradoSeccion            @relation(fields: [idGradoSeccion], references: [idGradoSeccion], onDelete: Restrict)
+  evaluacionesCualitativas EvaluacionCualitativa[]
+
+  @@map("inscripciones")
+}
+
+model EvaluacionCualitativa {
+  idEvaluacion          Int         @id @default(autoincrement()) @map("id_evaluacion")
+  idInscripcion         Int         @map("id_inscripcion")
+  lapso                 Int         // 1, 2 o 3
+  apreciacionDescriptiva String     @db.Text @map("apreciacion_descriptiva")
+  literalCalificacion   String      @map("literal_calificacion") // Ej: A, B, C
+
+  inscripcion           Inscripcion @relation(fields: [idInscripcion], references: [idInscripcion], onDelete: Cascade)
+
+  @@map("evaluaciones_cualitativas")
+}
+
+model MovimientoNomina {
+  idMovimiento Int      @id @default(autoincrement()) @map("id_movimiento")
+  idPersonal   String   @map("id_personal")
+  fechaPago    DateTime @map("fecha_pago") @db.Date
+  montoTotal   Float    @map("monto_total")
+  concepto     String   // Ej: "Sueldo Quincenal + Bono de Antigüedad"
+
+  personal     Personal @relation(fields: [idPersonal], references: [idPersonal], onDelete: Cascade)
+
+  @@map("movimientos_nomina")
+}
