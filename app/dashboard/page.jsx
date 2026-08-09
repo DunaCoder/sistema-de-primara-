@@ -44,14 +44,6 @@ export default function DashboardPage() {
             <p className="text-xs text-slate-500 mt-1">Subir literales y apreciaciones cualitativas por lapso.</p>
           </Link>
         );
-      case 'Nomina':
-        return (
-          <Link href="/dashboard/nomina" className="bg-slate-50 p-4 rounded-lg border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/30 transition-all group text-left">
-            <span className="text-2xl">💼</span>
-            <h3 className="font-bold text-slate-700 group-hover:text-indigo-600 mt-2 text-sm">Procesar Quincena</h3>
-            <p className="text-xs text-slate-500 mt-1">Calcular asignaciones, deducciones y emitir recibos.</p>
-          </Link>
-        );
       default:
         return null;
     }
@@ -70,7 +62,7 @@ export default function DashboardPage() {
             ¡Saludos, {user.nombreCompleto}!
           </h1>
           <p className="text-sm text-slate-500">
-            Conectado al Sistema de Control de la U.E.N.B. Crucita Delgado. Selecciona una acción para empezar.
+            Conectado al Sistema de Control de la U.E.N. Bicentenario, republicano. Selecciona una acción para empezar.
           </p>
         </div>
         <div className="bg-slate-100 p-4 rounded-full text-3xl text-slate-700 border border-slate-200 hidden md:block select-none">

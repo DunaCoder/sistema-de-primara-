@@ -12,39 +12,39 @@ const pool = new Pool({ connectionString });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
-export async function registrarInscripcionAction(formData) {
+export async function registrarInscripcionAction(data) {
   try {
     const {
       // Datos del Representante
-      idRepresentante, nombreRep, apellidoRep, telefonoRep, direccionRep,
+      idRepresentante, nombreRep, apellidoRep, telefono, direccionRep, // ✅ cambio aquí
       // Datos del Alumno
-      idAlumno, nombreAlu, apellidoAlu, fechaNacimiento, expedienteCompleto,
+      idAlumno, nombreAlu, apellidoAlu, fechaNacimiento,
       // Datos de asignación
       idGradoSeccion
-    } = formData;
-
+    } = data;
+console.log("📦 Datos recibidos en la acción:", JSON.stringify(data, null, 2));
     // Ejecutamos todo en una sola transacción atómica
     const resultado = await prisma.$transaction(async (tx) => {
       
-      // 1. Crear o actualizar al Representante (si ya existe, usamos upsert)
+      // 1. Crear o actualizar al Representante
       const representante = await tx.representante.upsert({
         where: { idRepresentante: idRepresentante },
         update: {
           nombre: nombreRep,
           apellido: apellidoRep,
-          telefono: telefonoRep,
+          telefono: telefono || '', // ✅ ahora telefono existe
           direccion: direccionRep
         },
         create: {
           idRepresentante: idRepresentante,
           nombre: nombreRep,
           apellido: apellidoRep,
-          telefono: telefonoRep,
+          telefono: telefono || '', // ✅ ahora telefono existe
           direccion: direccionRep
         }
       });
 
-      // 2. Verificar si el alumno ya está registrado para evitar duplicados
+      // 2. Verificar si el alumno ya existe
       const alumnoExiste = await tx.alumno.findUnique({
         where: { idAlumno: idAlumno }
       });
@@ -53,25 +53,23 @@ export async function registrarInscripcionAction(formData) {
         throw new Error("La cédula escolar o ID del alumno ya se encuentra registrada.");
       }
 
-      // 3. Crear al Alumno vinculado al representante
+      // 3. Crear al Alumno
       const nuevoAlumno = await tx.alumno.create({
         data: {
           idAlumno: idAlumno,
           nombre: nombreAlu,
           apellido: apellidoAlu,
           fechaNacimiento: new Date(fechaNacimiento),
-          idRepresentante: representante.idRepresentante,
-          expedienteCompleto: expedienteCompleto === 'si'
+          idRepresentante: representante.idRepresentante
         }
       });
 
-      // 4. Crear la Inscripción en el Grado/Sección seleccionado
-      // Nota: Asumimos por defecto el año escolar activo 2025-2026
+      // 4. Crear la Inscripción
       const inscripcion = await tx.inscripcion.create({
         data: {
           idAlumno: nuevoAlumno.idAlumno,
           idGradoSeccion: parseInt(idGradoSeccion),
-          anoEscolar: "2025-2026",
+          añoEscolar: "2025-2026",
           fechaInscripcion: new Date()
         }
       });
