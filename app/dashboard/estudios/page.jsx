@@ -19,7 +19,7 @@ export default function GestionUsuariosPage() {
     setError(null);
     const res = await obtenerUsuarios();
     if (res.success) {
-      setUsuarios(res.data); // ya vienen con 'activo' y 'rol'
+      setUsuarios(res.data); // Ya traen id (idUsuario), username, activo y rol
     } else {
       setError(res.error);
     }
@@ -31,7 +31,7 @@ export default function GestionUsuariosPage() {
   }, []);
 
   const startEditing = (usr) => {
-    setEditingId(usr.id);
+    setEditingId(usr.id_usuario); // 👈 Usamos el ID único real del usuario
     setEditForm({
       username: usr.username || '',
       activo: usr.activo !== undefined ? usr.activo : true,
@@ -44,7 +44,7 @@ export default function GestionUsuariosPage() {
   };
 
   const handleUsernameChange = (e) => {
-    const val = e.target.value.toLowerCase().replace(/\s+/g, '');
+    const val = e.target.value.toString().toLowerCase().replace(/\s+/g, '');
     setEditForm(prev => ({ ...prev, username: val }));
   };
 
@@ -52,9 +52,8 @@ export default function GestionUsuariosPage() {
     if (!editForm.username.trim()) return;
     setSavingId(id);
 
-    // Llamada correcta: pasamos un objeto con id y campos
-    const res = await actualizarUsuario({
-      id,
+    // 👈 Corregido: Se envían 2 argumentos separados (id, data) acordes al Server Action
+    const res = await actualizarUsuario(id, {
       username: editForm.username,
       activo: editForm.activo
     });
@@ -65,7 +64,7 @@ export default function GestionUsuariosPage() {
       return;
     }
 
-    // Actualización optimista
+    // Actualización optimista en la tabla
     setUsuarios(prev =>
       prev.map(u =>
         u.id === id
@@ -79,10 +78,9 @@ export default function GestionUsuariosPage() {
 
   const toggleEstatus = async (usr) => {
     const nuevoActivo = !usr.activo;
-    setSavingId(usr.id);
+    setSavingId(usr.id_usuario); 
 
-    const res = await actualizarUsuario({
-      id: usr.id,
+    const res = await actualizarUsuario(usr.id, {
       activo: nuevoActivo
     });
 
@@ -99,7 +97,7 @@ export default function GestionUsuariosPage() {
   };
 
   const getRolBadge = (rol = '') => {
-    const rolLower = rol.toLowerCase();
+    const rolLower = rol.toString().toLowerCase();
     if (rolLower.includes('admin') || rolLower.includes('director')) {
       return 'bg-purple-100 text-purple-800 border-purple-200';
     }
@@ -113,8 +111,8 @@ export default function GestionUsuariosPage() {
   };
 
   const usuariosActivosCount = usuarios.filter(u => u.activo).length;
-  const docentesCount = usuarios.filter(u => u.rol?.toLowerCase().includes('docente')).length;
-  const secretariaCount = usuarios.filter(u => u.rol?.toLowerCase().includes('secretaria')).length;
+  const docentesCount = usuarios.filter(u => u.rol?.toString().toLowerCase().includes('docente')).length;
+  const secretariaCount = usuarios.filter(u => u.rol?.toString().toLowerCase().includes('secretaria')).length;
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -133,7 +131,7 @@ export default function GestionUsuariosPage() {
         </div>
 
         <Link
-          href="/dashboard/usuarios/nuevo"  // ← cambia a la ruta de creación real
+          href="/dashboard/usuarios"
           className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm py-2.5 px-5 rounded-lg transition-colors shadow-sm flex items-center gap-2 shrink-0"
         >
           ➕ Registrar Nuevo Usuario
@@ -215,6 +213,7 @@ export default function GestionUsuariosPage() {
 
                     return (
                       <tr key={usr.id} className="hover:bg-slate-50/80 transition-colors">
+                        {/* ID real del usuario */}
                         <td className="p-4 font-mono text-slate-600 font-medium">{usr.id}</td>
 
                         {/* Nombre de usuario editable */}

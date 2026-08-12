@@ -12,8 +12,9 @@ const pool = new Pool({ connectionString });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
-// ========== FUNCIÓN EXISTENTE ==========
+// ========== CREAR USUARIO ==========
 export async function crearUsuarioAction(data) {
+  console.log("📥 [ACTION] crearUsuarioAction recibio datos:", data);
   try {
     const { username, password, idRol } = data;
 
@@ -21,112 +22,132 @@ export async function crearUsuarioAction(data) {
       where: { username }
     });
     if (existe) {
+      console.warn("⚠️ [ACTION] El username ya existe:", username);
       return { success: false, error: "El nombre de usuario ya está en uso." };
     }
 
     const nuevo = await prisma.usuario.create({
       data: {
         username,
-        password, // En producción, hashear con bcrypt
+        password,
         idRol: parseInt(idRol),
         estado: true
       }
     });
 
+    console.log("✅ [ACTION] Usuario creado con éxito:", nuevo.username);
     return { success: true, message: `Usuario ${nuevo.username} creado exitosamente.` };
   } catch (error) {
     console.error("❌ Error en crearUsuarioAction:", error);
     let mensaje = "Error interno al crear el usuario.";
-    if (error.code === 'P2002') {
-      mensaje = "El nombre de usuario ya existe (violación de unicidad).";
-    } else if (error.code === 'P2003') {
-      mensaje = "El rol seleccionado no existe en la base de datos.";
-    }
+    if (error.code === 'P2002') mensaje = "El nombre de usuario ya existe.";
+    else if (error.code === 'P2003') mensaje = "El rol seleccionado no existe.";
     return { success: false, error: mensaje };
   }
 }
 
-// ========== NUEVAS FUNCIONES ==========
-
-// Obtener todos los usuarios con su rol
+// ========== OBTENER TODOS LOS USUARIOS ==========
 export async function obtenerUsuarios() {
+  console.log("📥 [ACTION] Ejecutando obtenerUsuarios...");
   try {
     const usuarios = await prisma.usuario.findMany({
       include: {
-        rol: {
-          select: {
-            nombre: true
-          }
-        }
+        rol: true // Trae la relación con la tabla roles
       },
       orderBy: {
-        id: 'asc'
+        idUsuario: 'asc'
       }
     });
-    return { success: true, data: usuarios };
+
+    console.log(`🔍 [ACTION] Total de usuarios encontrados en DB: ${usuarios.length}`);
+    if (usuarios.length > 0) {
+      console.log("🔍 [ACTION] Ejemplo de objeto crudo devuelto por Prisma:", usuarios[0]);
+    }
+
+    // Transformamos los datos asegurando capturar el ID sin importar cómo lo devuelva Prisma
+    const dataFormateada = usuarios.map(u => ({
+      id: u.idUsuario ?? u.id_usuario ?? u.id, // 👈 Captura segura del ID
+      username: u.username,
+      activo: u.estado,
+      rol: u.rol?.nombre || ''
+    }));
+
+    console.log("✅ [ACTION] Datos formateados para el Frontend:", dataFormateada);
+    return { success: true, data: dataFormateada };
   } catch (error) {
     console.error("❌ Error en obtenerUsuarios:", error);
-    return { success: false, error: "Error al obtener los usuarios." };
+    return { success: false, error: error.message };
   }
 }
 
-// Actualizar un usuario existente
+// ========== ACTUALIZAR USUARIO ==========
 export async function actualizarUsuario(id, data) {
+  console.log("📥 [ACTION] actualizarUsuario llamado con ID:", id);
+  console.log("📥 [ACTION] Datos de actualización recibidos:", data);
+
   try {
+    const parsedId = parseInt(id);
+    if (isNaN(parsedId)) {
+      console.error("❌ [ACTION] El ID proporcionado no es un número válido:", id);
+      return { success: false, error: "ID de usuario inválido." };
+    }
+
     const { username, password, idRol, estado } = data;
 
-    // Verificar que el usuario existe
     const existe = await prisma.usuario.findUnique({
-      where: { id: parseInt(id) }
+      where: { id_usuario: parsedId }
     });
+    
     if (!existe) {
+      console.warn("⚠️ [ACTION] Usuario no encontrado con ID:", parsedId);
       return { success: false, error: "El usuario no existe." };
     }
 
-    // Si se cambia el username, verificar que no esté en uso por otro usuario
     if (username && username !== existe.username) {
-      const usernameDuplicado = await prisma.usuario.findUnique({
+      const duplicado = await prisma.usuario.findUnique({
         where: { username }
       });
-      if (usernameDuplicado) {
+      if (duplicado) {
+        console.warn("⚠️ [ACTION] El nuevo username ya está ocupado:", username);
         return { success: false, error: "El nuevo nombre de usuario ya está en uso." };
       }
     }
 
-    // Construir objeto de actualización solo con los campos que vienen
     const updateData = {};
     if (username !== undefined) updateData.username = username;
-    if (password !== undefined) updateData.password = password; // Hashear en producción
+    if (password !== undefined) updateData.password = password;
     if (idRol !== undefined) updateData.idRol = parseInt(idRol);
     if (estado !== undefined) updateData.estado = estado;
 
-    const usuarioActualizado = await prisma.usuario.update({
-      where: { id: parseInt(id) },
+    console.log("🛠️ [ACTION] Objeto final preparado para Prisma update:", updateData);
+
+    const actualizado = await prisma.usuario.update({
+      where: { id_usuario: parsedId },
       data: updateData
     });
 
-    return { success: true, message: `Usuario ${usuarioActualizado.username} actualizado correctamente.` };
+    console.log("✅ [ACTION] Usuario actualizado correctamente en DB:", actualizado.username);
+    return { success: true, message: `Usuario ${actualizado.username} actualizado correctamente.` };
   } catch (error) {
     console.error("❌ Error en actualizarUsuario:", error);
     let mensaje = "Error interno al actualizar el usuario.";
-    if (error.code === 'P2002') {
-      mensaje = "El nombre de usuario ya existe (violación de unicidad).";
-    } else if (error.code === 'P2003') {
-      mensaje = "El rol seleccionado no existe en la base de datos.";
-    } else if (error.code === 'P2025') {
-      mensaje = "El usuario que intentas actualizar no existe.";
-    }
+    if (error.code === 'P2002') mensaje = "El nombre de usuario ya existe.";
+    else if (error.code === 'P2003') mensaje = "El rol seleccionado no existe.";
+    else if (error.code === 'P2025') mensaje = "El usuario no existe.";
     return { success: false, error: mensaje };
   }
 }
 
-// (Opcional) Cambiar solo el estado (activo/inactivo)
+// ========== CAMBIAR ESTADO ==========
 export async function cambiarEstadoUsuario(id, estado) {
+  console.log(`📥 [ACTION] cambiarEstadoUsuario -> ID: ${id}, Nuevo estado: ${estado}`);
   try {
+    const parsedId = parseInt(id);
     const usuario = await prisma.usuario.update({
-      where: { id: parseInt(id) },
+      where: { id_usuario: parsedId },
       data: { estado }
     });
+    console.log(`✅ [ACTION] Estado cambiado con éxito para: ${usuario.username}`);
     return { success: true, message: `Estado de ${usuario.username} actualizado.` };
   } catch (error) {
     console.error("❌ Error en cambiarEstadoUsuario:", error);

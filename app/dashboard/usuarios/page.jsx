@@ -75,7 +75,7 @@ export default function UsuariosPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-        <h1 className="text-xl font-bold text-slate-800">Control de Accesos (Usuarios)</h1>
+        <h1 className="text-xl font-bold text-slate-800">Creacion de Usuarios</h1>
         <p className="text-xs text-slate-500 mt-1">Módulo exclusivo de Dirección para dar de alta al personal en la plataforma.</p>
       </div>
 
@@ -99,9 +99,9 @@ export default function UsuariosPage() {
         </div>
 
         <div>
-          <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Rol del Sistema *</label>
+          <label className="block text-xs font-bold text-slate-600 uppercase mb-1">Selecionar Cargo*</label>
           <select name="idRol" value={formData.idRol} onChange={handleChange} className="w-full text-black px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:border-indigo-500">
-            <option value="">Seleccione un rol</option>
+            <option value="">Seleccione un cargo</option>
             {roles.map((rol) => (
               <option key={rol.idRol} value={rol.idRol}>
                 {rol.nombre}

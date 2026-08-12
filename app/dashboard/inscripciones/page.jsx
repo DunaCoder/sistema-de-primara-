@@ -1,72 +1,104 @@
 'use client'
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { registrarInscripcionAction } from '../../actions/studens';
 import Swal from 'sweetalert2';
 
+const INITIAL_FORM_STATE = {
+  idRepresentante: '',
+  nombreRep: '',
+  apellidoRep: '',
+  codigoTelefono: '0412',
+  telefonoNumero: '',
+  telefono: '',
+  direccionRep: '',
+  nacionalidad: 'V',
+  cedulaNumero: '',
+  idAlumno: '',
+  tipoDocAlumno: 'CE',
+  numDocAlumno: '',
+  nombreAlu: '',
+  apellidoAlu: '',
+  fechaNacimiento: '',
+  idGradoSeccion: '1'
+};
+
 export default function InscripcionesPage() {
-  const [formData, setFormData] = useState({
-    idRepresentante: '',
-    nombreRep: '',
-    apellidoRep: '',
-    codigoTelefono: '0412',
-    telefonoNumero: '',
-    telefono: '',
-    direccionRep: '',
-    nacionalidad: 'V',
-    cedulaNumero: '',
-    idAlumno: '',
-    tipoDocAlumno: 'CE',
-    numDocAlumno: '',
-    nombreAlu: '',
-    apellidoAlu: '',
-    fechaNacimiento: '',
-    idGradoSeccion: '1'
-  });
-
+  const router = useRouter();
+  const [formData, setFormData] = useState(INITIAL_FORM_STATE);
   const [loading, setLoading] = useState(false);
+  
+  // Rastrea si el usuario editó manualmente el apellido del alumno
+  const [apellidoManual, setApellidoManual] = useState(false);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
+const handleChange = (e) => {
+  const { name, value } = e.target;
 
-    if (name === 'nacionalidad' || name === 'cedulaNumero') {
-      const soloNumeros = name === 'cedulaNumero' ? value.replace(/\D/g, '') : formData.cedulaNumero;
-      const nuevaNacionalidad = name === 'nacionalidad' ? value : (formData.nacionalidad || 'V');
+  // 1. Manejo unificado de Nombres y Apellidos (Solo letras, en MAYÚSCULAS)
+  if (['nombreRep', 'apellidoRep', 'nombreAlu', 'apellidoAlu'].includes(name)) {
+    // Se limpia la cadena una sola vez para todos los campos de texto
+    const soloLetrasMayusculas = value.toUpperCase().replace(/[^A-ZÁÉÍÓÚÑ\s]/g, '');
+
+    if (name === 'apellidoRep') {
       setFormData((prev) => ({
         ...prev,
-        nacionalidad: nuevaNacionalidad,
-        cedulaNumero: soloNumeros,
-        idRepresentante: soloNumeros ? `${nuevaNacionalidad}-${soloNumeros}` : ''
+        apellidoRep: soloLetrasMayusculas,
+        // Copia automática solo si el usuario no ha editado el apellido del alumno manualmente
+        apellidoAlu: apellidoManual ? prev.apellidoAlu : soloLetrasMayusculas
       }));
-    } else if (name === 'codigoTelefono' || name === 'telefonoNumero') {
-      const soloNumeros = name === 'telefonoNumero' ? value.replace(/\D/g, '') : formData.telefonoNumero;
-      const nuevoCodigo = name === 'codigoTelefono' ? value : (formData.codigoTelefono || '0412');
-      setFormData((prev) => ({
-        ...prev,
-        codigoTelefono: nuevoCodigo,
-        telefonoNumero: soloNumeros,
-        telefono: soloNumeros ? `${nuevoCodigo}${soloNumeros}` : ''
-      }));
-    } else if (name === 'tipoDocAlumno' || name === 'numDocAlumno') {
-      const soloNumeros = name === 'numDocAlumno' ? value.replace(/\D/g, '') : formData.numDocAlumno;
-      const nuevoTipo = name === 'tipoDocAlumno' ? value : (formData.tipoDocAlumno || 'CE');
-      const prefijo = nuevoTipo === 'CE' ? 'E' : nuevoTipo;
-      setFormData((prev) => ({
-        ...prev,
-        tipoDocAlumno: nuevoTipo,
-        numDocAlumno: soloNumeros,
-        idAlumno: soloNumeros ? `${prefijo}-${soloNumeros}` : ''
-      }));
+    } else if (name === 'apellidoAlu') {
+      setApellidoManual(true); // Rompe el enlace de auto-copia
+      setFormData((prev) => ({ ...prev, apellidoAlu: soloLetrasMayusculas }));
     } else {
-      setFormData((prev) => ({ ...prev, [name]: value }));
+      // Para 'nombreRep' y 'nombreAlu'
+      setFormData((prev) => ({ ...prev, [name]: soloLetrasMayusculas }));
     }
-  };
+  } 
+  // 2. Manejo de Cédula de Representante
+  else if (name === 'nacionalidad' || name === 'cedulaNumero') {
+    const soloNumeros = name === 'cedulaNumero' ? value.replace(/\D/g, '') : formData.cedulaNumero;
+    const nuevaNacionalidad = name === 'nacionalidad' ? value : (formData.nacionalidad || 'V');
+    setFormData((prev) => ({
+      ...prev,
+      nacionalidad: nuevaNacionalidad,
+      cedulaNumero: soloNumeros,
+      idRepresentante: soloNumeros ? `${nuevaNacionalidad}-${soloNumeros}` : ''
+    }));
+  } 
+  // 3. Manejo de Teléfono
+  else if (name === 'codigoTelefono' || name === 'telefonoNumero') {
+    const soloNumeros = name === 'telefonoNumero' ? value.replace(/\D/g, '') : formData.telefonoNumero;
+    const nuevoCodigo = name === 'codigoTelefono' ? value : (formData.codigoTelefono || '0412');
+    setFormData((prev) => ({
+      ...prev,
+      codigoTelefono: nuevoCodigo,
+      telefonoNumero: soloNumeros,
+      telefono: soloNumeros ? `${nuevoCodigo}${soloNumeros}` : ''
+    }));
+  } 
+  // 4. Manejo de Documento de Alumno (Cédula o Escolar)
+  else if (name === 'tipoDocAlumno' || name === 'numDocAlumno') {
+    const soloNumeros = name === 'numDocAlumno' ? value.replace(/\D/g, '') : formData.numDocAlumno;
+    const nuevoTipo = name === 'tipoDocAlumno' ? value : (formData.tipoDocAlumno || 'CE');
+    const prefijo = nuevoTipo === 'CE' ? 'E' : nuevoTipo;
+    setFormData((prev) => ({
+      ...prev,
+      tipoDocAlumno: nuevoTipo,
+      numDocAlumno: soloNumeros,
+      idAlumno: soloNumeros ? `${prefijo}-${soloNumeros}` : ''
+    }));
+  } 
+  // 5. Resto de campos estándar
+  else {
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  }
+};
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
-    // Validaciones básicas
     if (!formData.idRepresentante || !formData.idAlumno || !formData.nombreAlu || !formData.apellidoAlu) {
       await Swal.fire({
         icon: 'error',
@@ -78,7 +110,6 @@ export default function InscripcionesPage() {
       return;
     }
 
-    // Confirmación antes de enviar
     const confirmacion = await Swal.fire({
       title: '¿Confirmar inscripción?',
       text: 'Verifica que los datos sean correctos antes de continuar.',
@@ -108,28 +139,14 @@ export default function InscripcionesPage() {
         title: '🎉 Inscripción exitosa',
         text: res.message,
         confirmButtonColor: '#4f46e5',
-        timer: 3000,
+        timer: 2000,
         timerProgressBar: true,
       });
-      // Limpiar formulario
-      setFormData({
-        idRepresentante: '',
-        nombreRep: '',
-        apellidoRep: '',
-        codigoTelefono: '0412',
-        telefonoNumero: '',
-        telefono: '',
-        direccionRep: '',
-        nacionalidad: 'V',
-        cedulaNumero: '',
-        idAlumno: '',
-        tipoDocAlumno: 'CE',
-        numDocAlumno: '',
-        nombreAlu: '',
-        apellidoAlu: '',
-        fechaNacimiento: '',
-        idGradoSeccion: '1'
-      });
+
+      // Limpiar formulario y resetear estado de copia manual
+      setFormData(INITIAL_FORM_STATE);
+      setApellidoManual(false);
+      router.push('/dashboard/alumnos');
     } else {
       await Swal.fire({
         icon: 'error',
@@ -164,7 +181,7 @@ export default function InscripcionesPage() {
                   onChange={handleChange}
                   className="bg-slate-50 border border-slate-300 text-slate-800 text-sm font-bold rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-500 shrink-0 cursor-pointer"
                 >
-                  <option value="V">V- (Cédula)</option>
+                  <option value="V">V- (Nacionalidad)</option>
                   <option value="E">E- (Extranjero)</option>
                 </select>
                 <input
@@ -180,11 +197,25 @@ export default function InscripcionesPage() {
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-600 mb-1">Nombres *</label>
-              <input type="text" name="nombreRep"  value={formData.nombreRep} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500 text-slate-800"/>
+              <input 
+                type="text" 
+                name="nombreRep"  
+                value={formData.nombreRep} 
+                onChange={handleChange} 
+                placeholder="ej: carlos alberto"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500 text-slate-800 lowercase"
+              />
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-600 mb-1">Apellidos *</label>
-              <input type="text" name="apellidoRep"  value={formData.apellidoRep} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500 text-slate-800"/>
+              <input 
+                type="text" 
+                name="apellidoRep"  
+                value={formData.apellidoRep} 
+                onChange={handleChange} 
+                placeholder="ej: pérez mendoza"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500 text-slate-800 lowercase"
+              />
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-600 mb-1">Teléfono de Contacto</label>
@@ -213,7 +244,14 @@ export default function InscripcionesPage() {
             </div>
             <div className="sm:col-span-2">
               <label className="block text-xs font-semibold text-slate-600 mb-1">Dirección de Habitación</label>
-              <input type="text" name="direccionRep" value={formData.direccionRep} onChange={handleChange} placeholder="Municipio, Calle, Casa/Apto" className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500 text-slate-800"/>
+              <input 
+                type="text" 
+                name="direccionRep" 
+                value={formData.direccionRep} 
+                onChange={handleChange} 
+                placeholder="Municipio, Calle, Casa/Apto" 
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500 text-slate-800"
+              />
             </div>
           </div>
         </div>
@@ -234,7 +272,7 @@ export default function InscripcionesPage() {
                   className="bg-slate-50 border border-slate-300 text-slate-800 text-xs font-bold rounded-lg px-2.5 py-2 focus:outline-none focus:border-indigo-500 shrink-0 cursor-pointer"
                 >
                   <option value="CE">E- (Escolar)</option>
-                  <option value="V">V- (Cédula)</option>
+                  <option value="V">V- (Nacionalidad)</option>
                   <option value="E">E- (Extranjero)</option>
                 </select>
                 <input
@@ -250,19 +288,46 @@ export default function InscripcionesPage() {
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-600 mb-1">Nombres *</label>
-              <input type="text" name="nombreAlu"  value={formData.nombreAlu} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500 text-slate-800"/>
+              <input 
+                type="text" 
+                name="nombreAlu"  
+                value={formData.nombreAlu} 
+                onChange={handleChange} 
+                placeholder="ej: luis fernando"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500 text-slate-800 lowercase"
+              />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Apellidos *</label>
-              <input type="text" name="apellidoAlu" value={formData.apellidoAlu} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500 text-slate-800"/>
+              <label className="block text-xs font-semibold text-slate-600 mb-1">
+                Apellidos * {apellidoManual && <span className="text-[10px] text-indigo-500 font-normal">(Editado)</span>}
+              </label>
+              <input 
+                type="text" 
+                name="apellidoAlu" 
+                value={formData.apellidoAlu} 
+                onChange={handleChange} 
+                placeholder="ej: pérez mendoza"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500 text-slate-800 lowercase"
+              />
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-600 mb-1">Fecha de Nacimiento</label>
-              <input type="date" name="fechaNacimiento" value={formData.fechaNacimiento} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500 text-slate-800"/>
+              <input 
+                type="date" 
+                name="fechaNacimiento" 
+                value={formData.fechaNacimiento} 
+                onChange={handleChange} 
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500 text-slate-800"
+              />
             </div>
             <div>
               <label className="block text-xs font-semibold text-slate-600 mb-1">Asignar Grado y Sección</label>
-              <select name="idGradoSeccion" value={formData.idGradoSeccion} onChange={handleChange} className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500 bg-white text-slate-800">
+              <select 
+                name="idGradoSeccion" 
+                value={formData.idGradoSeccion} 
+                onChange={handleChange} 
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500 bg-white text-slate-800"
+              >
                 <option value="1">1er Grado - Sección A</option>
               </select>
             </div>
