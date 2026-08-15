@@ -2,22 +2,25 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { registrarInscripcionAction } from '../../actions/studens';
+import { registrarInscripcionAction, buscarRepresentanteAction } from '../../actions/studens';
 import Swal from 'sweetalert2';
 
-const INITIAL_FORM_STATE = {
+const INITIAL_REP_STATE = {
+  nacionalidad: 'V',
+  cedulaNumero: '',
   idRepresentante: '',
   nombreRep: '',
   apellidoRep: '',
   codigoTelefono: '0412',
   telefonoNumero: '',
   telefono: '',
-  direccionRep: '',
-  nacionalidad: 'V',
-  cedulaNumero: '',
-  idAlumno: '',
+  direccionRep: ''
+};
+
+const ALUMNO_TEMPLATE = {
   tipoDocAlumno: 'CE',
   numDocAlumno: '',
+  idAlumno: '',
   nombreAlu: '',
   apellidoAlu: '',
   fechaNacimiento: '',
@@ -26,93 +29,187 @@ const INITIAL_FORM_STATE = {
 
 export default function InscripcionesPage() {
   const router = useRouter();
-  const [formData, setFormData] = useState(INITIAL_FORM_STATE);
-  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState(INITIAL_REP_STATE);
   
-  // Rastrea si el usuario editó manualmente el apellido del alumno
-  const [apellidoManual, setApellidoManual] = useState(false);
+  // Arreglo dinámico de alumnos (hermanos)
+  const [alumnos, setAlumnos] = useState([ { ...ALUMNO_TEMPLATE } ]);
 
-const handleChange = (e) => {
-  const { name, value } = e.target;
+  const [loading, setLoading] = useState(false);
+  const [repEncontrado, setRepEncontrado] = useState(false);
+  const [cargandoRep, setCargandoRep] = useState(false);
 
-  // 1. Manejo unificado de Nombres y Apellidos (Solo letras, en MAYÚSCULAS)
-  if (['nombreRep', 'apellidoRep', 'nombreAlu', 'apellidoAlu'].includes(name)) {
-    // Se limpia la cadena una sola vez para todos los campos de texto
-    const soloLetrasMayusculas = value.toUpperCase().replace(/[^A-ZÁÉÍÓÚÑ\s]/g, '');
+  // Consulta en PostgreSQL si la cédula ingresada ya existe
+  const verificarRepresentanteExistente = async (idRep) => {
+    if (!idRep || idRep.length < 5) return;
 
-    if (name === 'apellidoRep') {
+    setCargandoRep(true);
+    const res = await buscarRepresentanteAction(idRep);
+    setCargandoRep(false);
+
+    if (res.success && res.data) {
+      const rep = res.data;
+      setRepEncontrado(true);
+
+      let codTel = '0412';
+      let numTel = rep.telefono || '';
+      if (numTel.length >= 10) {
+        codTel = numTel.substring(0, 4);
+        numTel = numTel.substring(4);
+      }
+
       setFormData((prev) => ({
         ...prev,
-        apellidoRep: soloLetrasMayusculas,
-        // Copia automática solo si el usuario no ha editado el apellido del alumno manualmente
-        apellidoAlu: apellidoManual ? prev.apellidoAlu : soloLetrasMayusculas
+        nombreRep: rep.nombre || '',
+        apellidoRep: rep.apellido || '',
+        codigoTelefono: codTel,
+        telefonoNumero: numTel,
+        telefono: rep.telefono || '',
+        direccionRep: rep.direccion || ''
       }));
-    } else if (name === 'apellidoAlu') {
-      setApellidoManual(true); // Rompe el enlace de auto-copia
-      setFormData((prev) => ({ ...prev, apellidoAlu: soloLetrasMayusculas }));
-    } else {
-      // Para 'nombreRep' y 'nombreAlu'
-      setFormData((prev) => ({ ...prev, [name]: soloLetrasMayusculas }));
-    }
-  } 
-  // 2. Manejo de Cédula de Representante
-  else if (name === 'nacionalidad' || name === 'cedulaNumero') {
-    const soloNumeros = name === 'cedulaNumero' ? value.replace(/\D/g, '') : formData.cedulaNumero;
-    const nuevaNacionalidad = name === 'nacionalidad' ? value : (formData.nacionalidad || 'V');
-    setFormData((prev) => ({
-      ...prev,
-      nacionalidad: nuevaNacionalidad,
-      cedulaNumero: soloNumeros,
-      idRepresentante: soloNumeros ? `${nuevaNacionalidad}-${soloNumeros}` : ''
-    }));
-  } 
-  // 3. Manejo de Teléfono
-  else if (name === 'codigoTelefono' || name === 'telefonoNumero') {
-    const soloNumeros = name === 'telefonoNumero' ? value.replace(/\D/g, '') : formData.telefonoNumero;
-    const nuevoCodigo = name === 'codigoTelefono' ? value : (formData.codigoTelefono || '0412');
-    setFormData((prev) => ({
-      ...prev,
-      codigoTelefono: nuevoCodigo,
-      telefonoNumero: soloNumeros,
-      telefono: soloNumeros ? `${nuevoCodigo}${soloNumeros}` : ''
-    }));
-  } 
-  // 4. Manejo de Documento de Alumno (Cédula o Escolar)
-  else if (name === 'tipoDocAlumno' || name === 'numDocAlumno') {
-    const soloNumeros = name === 'numDocAlumno' ? value.replace(/\D/g, '') : formData.numDocAlumno;
-    const nuevoTipo = name === 'tipoDocAlumno' ? value : (formData.tipoDocAlumno || 'CE');
-    const prefijo = nuevoTipo === 'CE' ? 'E' : nuevoTipo;
-    setFormData((prev) => ({
-      ...prev,
-      tipoDocAlumno: nuevoTipo,
-      numDocAlumno: soloNumeros,
-      idAlumno: soloNumeros ? `${prefijo}-${soloNumeros}` : ''
-    }));
-  } 
-  // 5. Resto de campos estándar
-  else {
-    setFormData((prev) => ({ ...prev, [name]: value }));
-  }
-};
 
+      // Copiar el apellido del representante encontrado a todos los alumnos
+      const apellidoEncontrado = (rep.apellido || '').toUpperCase();
+      setAlumnos((prevAlumnos) =>
+        prevAlumnos.map((alu) => ({ ...alu, apellidoAlu: apellidoEncontrado }))
+      );
+
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'info',
+        title: 'Representante encontrado',
+        text: 'Se han autocompletado sus datos.',
+        showConfirmButton: false,
+        timer: 3000
+      });
+    } else {
+      setRepEncontrado(false);
+    }
+  };
+
+  // Manejador para los datos del Representante
+  const handleRepChange = (e) => {
+    const { name, value } = e.target;
+
+    if (['nombreRep', 'apellidoRep'].includes(name)) {
+      const soloLetras = value.toUpperCase().replace(/[^A-ZÁÉÍÓÚÑ\s]/g, '');
+      setFormData((prev) => ({ ...prev, [name]: soloLetras }));
+
+      // Si cambia el apellido del representante, copialo a todos los alumnos automáticamente
+      if (name === 'apellidoRep') {
+        setAlumnos((prevAlumnos) =>
+          prevAlumnos.map((alu) => ({ ...alu, apellidoAlu: soloLetras }))
+        );
+      }
+    } 
+    else if (name === 'nacionalidad' || name === 'cedulaNumero') {
+      const soloNumeros = name === 'cedulaNumero' ? value.replace(/\D/g, '') : formData.cedulaNumero;
+      const nuevaNac = name === 'nacionalidad' ? value : (formData.nacionalidad || 'V');
+      const nuevoIdRep = soloNumeros ? `${nuevaNac}-${soloNumeros}` : '';
+
+      setFormData((prev) => ({
+        ...prev,
+        nacionalidad: nuevaNac,
+        cedulaNumero: soloNumeros,
+        idRepresentante: nuevoIdRep
+      }));
+    } 
+    else if (name === 'codigoTelefono' || name === 'telefonoNumero') {
+      const soloNumeros = name === 'telefonoNumero' ? value.replace(/\D/g, '') : formData.telefonoNumero;
+      const nuevoCod = name === 'codigoTelefono' ? value : (formData.codigoTelefono || '0412');
+      setFormData((prev) => ({
+        ...prev,
+        codigoTelefono: nuevoCod,
+        telefonoNumero: soloNumeros,
+        telefono: soloNumeros ? `${nuevoCod}${soloNumeros}` : ''
+      }));
+    } 
+    else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
+  };
+
+  // Manejador para cada alumno en la lista dinámicamente
+  const handleAlumnoChange = (index, field, value) => {
+    setAlumnos((prev) => {
+      const nuevosAlumnos = [...prev];
+      const alumnoActual = { ...nuevosAlumnos[index] };
+
+      if (field === 'nombreAlu') {
+        alumnoActual.nombreAlu = value.toUpperCase().replace(/[^A-ZÁÉÍÓÚÑ\s]/g, '');
+      } 
+      else if (field === 'tipoDocAlumno' || field === 'numDocAlumno') {
+        const tipo = field === 'tipoDocAlumno' ? value : alumnoActual.tipoDocAlumno;
+        const num = field === 'numDocAlumno' ? value.replace(/\D/g, '') : alumnoActual.numDocAlumno;
+        const prefijo = tipo === 'CE' ? 'E' : tipo;
+
+        alumnoActual.tipoDocAlumno = tipo;
+        alumnoActual.numDocAlumno = num;
+        alumnoActual.idAlumno = num ? `${prefijo}-${num}` : '';
+      } 
+      else {
+        alumnoActual[field] = value;
+      }
+
+      nuevosAlumnos[index] = alumnoActual;
+      return nuevosAlumnos;
+    });
+  };
+
+  // Función para AGREGAR un alumno (Hermano)
+  const agregarAlumno = () => {
+    setAlumnos((prev) => [
+      ...prev,
+      {
+        ...ALUMNO_TEMPLATE,
+        // Copia automáticamente el apellido actual del representante
+        apellidoAlu: formData.apellidoRep || ''
+      }
+    ]);
+  };
+
+  // Función para ELIMINAR un alumno de la lista
+  const eliminarAlumno = (index) => {
+    if (alumnos.length === 1) return; // Mínimo un alumno
+    setAlumnos((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Envío de formulario
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
-    if (!formData.idRepresentante || !formData.idAlumno || !formData.nombreAlu || !formData.apellidoAlu) {
+    // Validación bs
+    if (!formData.idRepresentante || !formData.nombreRep || !formData.apellidoRep) {
       await Swal.fire({
         icon: 'error',
-        title: 'Campos incompletos',
-        text: 'Por favor, rellene los campos obligatorios del Alumno y Representante.',
+        title: 'Datos del Representante Incompletos',
+        text: 'Por favor, rellene la cédula, nombre y apellido del representante.',
         confirmButtonColor: '#dc2626',
       });
       setLoading(false);
       return;
     }
 
+    // Validar que cada alumno tenga id y nombre
+    for (let i = 0; i < alumnos.length; i++) {
+      if (!alumnos[i].idAlumno || !alumnos[i].nombreAlu) {
+        await Swal.fire({
+          icon: 'error',
+          title: `Datos incompletos en Alumno #${i + 1}`,
+          text: 'Asegúrese de ingresar el Documento y Nombre para todos los alumnos.',
+          confirmButtonColor: '#dc2626',
+        });
+        setLoading(false);
+        return;
+      }
+    }
+
     const confirmacion = await Swal.fire({
       title: '¿Confirmar inscripción?',
-      text: 'Verifica que los datos sean correctos antes de continuar.',
+      text: alumnos.length > 1
+        ? `Se inscribirán ${alumnos.length} alumnos vinculados a ${formData.nombreRep} ${formData.apellidoRep}.`
+        : `Se inscribirá a 1 alumno vinculado a ${formData.nombreRep} ${formData.apellidoRep}.`,
       icon: 'question',
       showCancelButton: true,
       confirmButtonColor: '#4f46e5',
@@ -128,7 +225,7 @@ const handleChange = (e) => {
 
     const payload = {
       ...formData,
-      telefono: formData.telefono || '',
+      alumnos
     };
 
     const res = await registrarInscripcionAction(payload);
@@ -139,13 +236,13 @@ const handleChange = (e) => {
         title: '🎉 Inscripción exitosa',
         text: res.message,
         confirmButtonColor: '#4f46e5',
-        timer: 2000,
+        timer: 2500,
         timerProgressBar: true,
       });
 
-      // Limpiar formulario y resetear estado de copia manual
-      setFormData(INITIAL_FORM_STATE);
-      setApellidoManual(false);
+      setFormData(INITIAL_REP_STATE);
+      setAlumnos([{ ...ALUMNO_TEMPLATE }]);
+      setRepEncontrado(false);
       router.push('/dashboard/alumnos');
     } else {
       await Swal.fire({
@@ -159,18 +256,34 @@ const handleChange = (e) => {
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="space-y-6 max-w-4xl mx-auto pb-10">
       <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
         <h1 className="text-xl font-bold text-slate-800">Ficha de Inscripción Escolar</h1>
-        <p className="text-xs text-slate-500 mt-1">Registrar nuevo ingreso en la matrícula para el Año Escolar 2025-2026.</p>
+        <p className="text-xs text-slate-500 mt-1">
+          Registrar nuevo ingreso (individual o hermanos) para el Año Escolar 2025-2026.
+        </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        
         {/* SECCIÓN 1: DATOS DEL REPRESENTANTE */}
         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
-          <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 pb-2">
-            👨‍👦 Datos del Representante Legal
-          </h2>
+          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+            <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider">
+              👨‍👦 Datos del Representante Legal
+            </h2>
+            {repEncontrado && (
+              <span className="text-xs bg-emerald-100 text-emerald-700 px-2.5 py-0.5 rounded-full font-medium">
+                ✓ Representante Registrado
+              </span>
+            )}
+            {cargandoRep && (
+              <span className="text-xs text-indigo-600 font-medium animate-pulse">
+                Buscando cédula en la BD...
+              </span>
+            )}
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate-600 mb-1">Cédula de Identidad *</label>
@@ -178,52 +291,56 @@ const handleChange = (e) => {
                 <select
                   name="nacionalidad"
                   value={formData.nacionalidad || 'V'}
-                  onChange={handleChange}
+                  onChange={handleRepChange}
                   className="bg-slate-50 border border-slate-300 text-slate-800 text-sm font-bold rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-500 shrink-0 cursor-pointer"
                 >
-                  <option value="V">V- (Nacionalidad)</option>
-                  <option value="E">E- (Extranjero)</option>
+                  <option value="V">V-</option>
+                  <option value="E">E-</option>
                 </select>
                 <input
                   type="text"
                   name="cedulaNumero"
                   value={formData.cedulaNumero || ''}
-                  onChange={handleChange}
+                  onChange={handleRepChange}
+                  onBlur={() => verificarRepresentanteExistente(formData.idRepresentante)}
                   placeholder="12345678"
                   maxLength={12}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500 text-slate-800 font-mono"
                 />
               </div>
             </div>
+
             <div>
               <label className="block text-xs font-semibold text-slate-600 mb-1">Nombres *</label>
               <input 
                 type="text" 
                 name="nombreRep"  
                 value={formData.nombreRep} 
-                onChange={handleChange} 
-                placeholder="ej: carlos alberto"
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500 text-slate-800 lowercase"
+                onChange={handleRepChange} 
+                placeholder="CARLOS ALBERTO"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500 text-slate-800 uppercase"
               />
             </div>
+
             <div>
               <label className="block text-xs font-semibold text-slate-600 mb-1">Apellidos *</label>
               <input 
                 type="text" 
                 name="apellidoRep"  
                 value={formData.apellidoRep} 
-                onChange={handleChange} 
-                placeholder="ej: pérez mendoza"
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500 text-slate-800 lowercase"
+                onChange={handleRepChange} 
+                placeholder="PÉREZ MENDOZA"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500 text-slate-800 uppercase"
               />
             </div>
+
             <div>
               <label className="block text-xs font-semibold text-slate-600 mb-1">Teléfono de Contacto</label>
               <div className="flex gap-2">
                 <select
                   name="codigoTelefono"
                   value={formData.codigoTelefono || '0412'}
-                  onChange={handleChange}
+                  onChange={handleRepChange}
                   className="bg-slate-50 border border-slate-300 text-slate-800 text-sm font-bold rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-500 shrink-0 cursor-pointer font-mono"
                 >
                   <option value="0412">0412</option>
@@ -235,20 +352,21 @@ const handleChange = (e) => {
                   type="text"
                   name="telefonoNumero"
                   value={formData.telefonoNumero || ''}
-                  onChange={handleChange}
+                  onChange={handleRepChange}
                   placeholder="1234567"
                   maxLength={7}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500 text-slate-800 font-mono"
                 />
               </div>
             </div>
+
             <div className="sm:col-span-2">
               <label className="block text-xs font-semibold text-slate-600 mb-1">Dirección de Habitación</label>
               <input 
                 type="text" 
                 name="direccionRep" 
                 value={formData.direccionRep} 
-                onChange={handleChange} 
+                onChange={handleRepChange} 
                 placeholder="Municipio, Calle, Casa/Apto" 
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500 text-slate-800"
               />
@@ -256,91 +374,132 @@ const handleChange = (e) => {
           </div>
         </div>
 
-        {/* SECCIÓN 2: DATOS DEL ALUMNO */}
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
-          <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 pb-2">
-            🎒 Datos del Estudiante
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Cédula o ID Escolar *</label>
-              <div className="flex gap-2">
-                <select
-                  name="tipoDocAlumno"
-                  value={formData.tipoDocAlumno || 'CE'}
-                  onChange={handleChange}
-                  className="bg-slate-50 border border-slate-300 text-slate-800 text-xs font-bold rounded-lg px-2.5 py-2 focus:outline-none focus:border-indigo-500 shrink-0 cursor-pointer"
-                >
-                  <option value="CE">E- (Escolar)</option>
-                  <option value="V">V- (Nacionalidad)</option>
-                  <option value="E">E- (Extranjero)</option>
-                </select>
-                <input
-                  type="text"
-                  name="numDocAlumno"
-                  value={formData.numDocAlumno || ''}
-                  onChange={handleChange}
-                  placeholder="12345678"
-                  maxLength={11}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500 text-slate-800 font-mono"
-                />
+        {/* SECCIÓN 2: ALUMNOS / ESTUDIANTES */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-bold text-slate-600 uppercase tracking-wider">
+              🎒 Estudiante(s) a Inscribir ({alumnos.length})
+            </h2>
+
+            {/* BOTÓN PARA AGREGAR OTRO ALUMNO */}
+            <button
+              type="button"
+              onClick={agregarAlumno}
+              className="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+            >
+              <span>+</span> Agregar otro alumno (Hermano)
+            </button>
+          </div>
+
+          {alumnos.map((alu, index) => (
+            <div 
+              key={index} 
+              className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4 relative"
+            >
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                <span className="text-xs font-bold bg-indigo-50 text-indigo-600 px-2.5 py-1 rounded-md">
+                  Alumno #{index + 1} {index > 0 && "(Hermano)"}
+                </span>
+
+                {alumnos.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => eliminarAlumno(index)}
+                    className="text-xs text-rose-500 hover:text-rose-700 font-medium hover:underline cursor-pointer"
+                  >
+                    ✕ Quitar este alumno
+                  </button>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                {/* ID / CÉDULA ESCOLAR */}
+                <div className="sm:col-span-1">
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">
+                    ID / Cédula Escolar *
+                  </label>
+                  <div className="flex gap-2">
+                    <select
+                      value={alu.tipoDocAlumno || 'CE'}
+                      onChange={(e) => handleAlumnoChange(index, 'tipoDocAlumno', e.target.value)}
+                      className="bg-slate-50 border border-slate-300 text-slate-800 text-xs font-bold rounded-lg px-2 py-2 focus:outline-none focus:border-indigo-500 shrink-0 cursor-pointer"
+                    >
+                      <option value="CE">E-</option>
+                      <option value="V">V-</option>
+                      <option value="E">E-</option>
+                    </select>
+                    <input
+                      type="text"
+                      value={alu.numDocAlumno || ''}
+                      onChange={(e) => handleAlumnoChange(index, 'numDocAlumno', e.target.value)}
+                      placeholder="12345678"
+                      maxLength={11}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500 text-slate-800 font-mono"
+                    />
+                  </div>
+                </div>
+
+                {/* NOMBRE DEL ALUMNO */}
+                <div className="sm:col-span-1">
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Nombre *</label>
+                  <input 
+                    type="text" 
+                    value={alu.nombreAlu} 
+                    onChange={(e) => handleAlumnoChange(index, 'nombreAlu', e.target.value)} 
+                    placeholder="LUIS FERNANDO"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500 text-slate-800 uppercase"
+                  />
+                </div>
+
+                {/* APELLIDO (COPIADO DEL REPRESENTANTE) */}
+                <div className="sm:col-span-1">
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">
+                    Apellido <span className="text-[10px] text-indigo-500 font-normal">(Copiado del Rep.)</span>
+                  </label>
+                  <input 
+                    type="text" 
+                    value={alu.apellidoAlu} 
+                    disabled
+                    readOnly
+                    className="w-full px-3 py-2 border border-slate-200 bg-slate-50 rounded-lg text-sm text-slate-500 font-medium uppercase cursor-not-allowed"
+                  />
+                </div>
+
+                {/* FECHA DE NACIMIENTO */}
+                <div className="sm:col-span-1">
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Fecha Nacimiento</label>
+                  <input 
+                    type="date" 
+                    value={alu.fechaNacimiento} 
+                    onChange={(e) => handleAlumnoChange(index, 'fechaNacimiento', e.target.value)} 
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500 text-slate-800"
+                  />
+                </div>
+
+                {/* ASIGNAR GRADO Y SECCIÓN */}
+                <div className="sm:col-span-4">
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Grado y Sección *</label>
+                  <select 
+                    value={alu.idGradoSeccion} 
+                    onChange={(e) => handleAlumnoChange(index, 'idGradoSeccion', e.target.value)} 
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500 bg-white text-slate-800"
+                  >
+                    <option value="1">1er Grado - Sección A</option>
+                  </select>
+                </div>
               </div>
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Nombres *</label>
-              <input 
-                type="text" 
-                name="nombreAlu"  
-                value={formData.nombreAlu} 
-                onChange={handleChange} 
-                placeholder="ej: luis fernando"
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500 text-slate-800 lowercase"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">
-                Apellidos * {apellidoManual && <span className="text-[10px] text-indigo-500 font-normal">(Editado)</span>}
-              </label>
-              <input 
-                type="text" 
-                name="apellidoAlu" 
-                value={formData.apellidoAlu} 
-                onChange={handleChange} 
-                placeholder="ej: pérez mendoza"
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500 text-slate-800 lowercase"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Fecha de Nacimiento</label>
-              <input 
-                type="date" 
-                name="fechaNacimiento" 
-                value={formData.fechaNacimiento} 
-                onChange={handleChange} 
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500 text-slate-800"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Asignar Grado y Sección</label>
-              <select 
-                name="idGradoSeccion" 
-                value={formData.idGradoSeccion} 
-                onChange={handleChange} 
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500 bg-white text-slate-800"
-              >
-                <option value="1">1er Grado - Sección A</option>
-              </select>
-            </div>
-          </div>
+          ))}
         </div>
 
-        <div className="flex justify-end">
+        {/* BOTÓN SUBMIT */}
+        <div className="flex justify-end pt-2">
           <button
             type="submit"
             disabled={loading}
             className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm py-2.5 px-6 rounded-lg transition-colors shadow-sm disabled:opacity-50 cursor-pointer"
           >
-            {loading ? 'Registrando en Postgres...' : 'Procesar Inscripción Completa'}
+            {loading ? 'Guardando en la base de datos...' : `Procesar Inscripción (${alumnos.length} Alumno${alumnos.length > 1 ? 's' : ''})`}
           </button>
         </div>
       </form>
