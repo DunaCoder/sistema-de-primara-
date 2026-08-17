@@ -29,13 +29,13 @@ export default function DashboardLayout({ children }) {
   // 📌 Definición centralizada de todos los ítems del menú con sus roles
   const menuItems = [
     { label: 'Inicio Dashboard', path: '/dashboard', icon: '🏠', roles: ['Admin', 'Secretaria', 'Docente'] },
-    // { label: 'Control de Estudios', path: '/dashboard/estudios', icon: '📂', roles: ['Docente'] },
+    { label: 'Control de Estudios', path: '/dashboard/estudios', icon: '📂', roles: ['Admin'] },
     { label: 'Inscribir Alumno', path: '/dashboard/inscripciones', icon: '📝', roles: ['Secretaria'] },
     { label: 'Ver Matrícula', path: '/dashboard/alumnos', icon: '👥', roles: ['Secretaria'] },
     { label: 'Gestión de Estudiantes', path: '/dashboard/estudiantes/nuevo', icon: '👥', roles: ['Docente'] },
     { label: 'Gestión de Notas', path: '/dashboard/gestion', icon: '📝', roles: ['Docente'] },
     { label: 'Notas y Asistencia', path: '/dashboard/notas', icon: '📊', roles: ['Secretaria'] },
-     { label: 'Peticiones de Personal', path: '/dashboard/peticiones', icon: '📩', roles: ['Admin'] },
+    { label: 'Peticiones de Personal', path: '/dashboard/peticiones', icon: '📩', roles: ['Admin'] },
     { label: 'Gestionar Usuarios', path: '/dashboard/usuarios', icon: '👤', roles: ['Admin'] },
   ];
 

@@ -17,7 +17,7 @@ export default function UsuariosPage() {
   useEffect(() => {
     async function cargarRoles() {
       const data = await obtenerRoles();
-      // 👇 Filtramos Admin para que no aparezca en el select
+      // Filtramos Admin para que no aparezca en el select
       const rolesFiltrados = data.filter(rol => rol.nombre !== 'Admin');
       setRoles(rolesFiltrados);
     }

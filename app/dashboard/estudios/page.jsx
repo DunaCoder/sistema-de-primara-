@@ -3,31 +3,43 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { obtenerUsuarios, actualizarUsuario } from '../../actions/usuarios';
+import Swal from 'sweetalert2';
+import { obtenerUsuarios, obtenerRoles, actualizarUsuario } from '../../actions/usuarios';
 
 export default function GestionUsuariosPage() {
   const [usuarios, setUsuarios] = useState([]);
+  const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const [editingId, setEditingId] = useState(null);
-  const [editForm, setEditForm] = useState({ username: '', activo: true });
+  const [editForm, setEditForm] = useState({ username: '', activo: true, idRol: '' });
   const [savingId, setSavingId] = useState(null);
 
-  const cargarUsuarios = async () => {
+  const cargarDatos = async () => {
     setLoading(true);
     setError(null);
-    const res = await obtenerUsuarios();
-    if (res.success) {
-      setUsuarios(res.data); // ya vienen con 'activo' y 'rol'
+
+    const [resUsuarios, resRoles] = await Promise.all([
+      obtenerUsuarios(),
+      obtenerRoles()
+    ]);
+
+    if (resUsuarios.success) {
+      setUsuarios(resUsuarios.data);
     } else {
-      setError(res.error);
+      setError(resUsuarios.error);
     }
+
+    if (resRoles.success) {
+      setRoles(resRoles.data);
+    }
+
     setLoading(false);
   };
 
   useEffect(() => {
-    cargarUsuarios();
+    cargarDatos();
   }, []);
 
   const startEditing = (usr) => {
@@ -35,59 +47,102 @@ export default function GestionUsuariosPage() {
     setEditForm({
       username: usr.username || '',
       activo: usr.activo !== undefined ? usr.activo : true,
+      idRol: usr.idRol || '',
     });
   };
 
   const cancelEditing = () => {
     setEditingId(null);
-    setEditForm({ username: '', activo: true });
+    setEditForm({ username: '', activo: true, idRol: '' });
   };
 
   const handleUsernameChange = (e) => {
-    const val = e.target.value.toLowerCase().replace(/\s+/g, '');
+    const val = e.target.value.toString().toLowerCase().replace(/\s+/g, '');
     setEditForm(prev => ({ ...prev, username: val }));
   };
 
   const saveChanges = async (id) => {
     if (!editForm.username.trim()) return;
+
+    const confirmResult = await Swal.fire({
+      title: '¿Guardar cambios?',
+      text: '¿Estás seguro de que deseas actualizar la información de este usuario?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#4f46e5',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Sí, guardar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (!confirmResult.isConfirmed) return;
+
     setSavingId(id);
 
-    // Llamada correcta: pasamos un objeto con id y campos
-    const res = await actualizarUsuario({
-      id,
+    const res = await actualizarUsuario(id, {
       username: editForm.username,
-      activo: editForm.activo
+      activo: editForm.activo,
+      idRol: editForm.idRol
     });
 
     if (!res?.success) {
-      alert(res?.error || 'Error al actualizar');
+      Swal.fire('Error', res?.error || 'No se pudo actualizar el usuario', 'error');
       setSavingId(null);
       return;
     }
 
-    // Actualización optimista
+    const rolSeleccionado = roles.find(r => String(r.idRol) === String(editForm.idRol));
+
     setUsuarios(prev =>
       prev.map(u =>
         u.id === id
-          ? { ...u, username: editForm.username, activo: editForm.activo }
+          ? {
+              ...u,
+              username: editForm.username,
+              activo: editForm.activo,
+              idRol: editForm.idRol,
+              rol: rolSeleccionado ? rolSeleccionado.nombre : u.rol
+            }
           : u
       )
     );
+
     setSavingId(null);
     setEditingId(null);
+
+    Swal.fire({
+      icon: 'success',
+      title: '¡Actualizado!',
+      text: 'Los cambios se han guardado correctamente.',
+      timer: 1500,
+      showConfirmButton: false
+    });
   };
 
   const toggleEstatus = async (usr) => {
     const nuevoActivo = !usr.activo;
+
+    const confirmResult = await Swal.fire({
+      title: '¿Cambiar estatus?',
+      text: `¿Deseas ${nuevoActivo ? 'activar' : 'inactivar'} a este usuario?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#4f46e5',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Sí, cambiar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (!confirmResult.isConfirmed) return;
+
     setSavingId(usr.id);
 
-    const res = await actualizarUsuario({
-      id: usr.id,
+    const res = await actualizarUsuario(usr.id, {
       activo: nuevoActivo
     });
 
     if (!res?.success) {
-      alert(res?.error || 'Error al cambiar estatus');
+      Swal.fire('Error', res?.error || 'Error al cambiar estatus', 'error');
       setSavingId(null);
       return;
     }
@@ -96,10 +151,17 @@ export default function GestionUsuariosPage() {
       prev.map(u => (u.id === usr.id ? { ...u, activo: nuevoActivo } : u))
     );
     setSavingId(null);
+
+    Swal.fire({
+      icon: 'success',
+      title: 'Estatus actualizado',
+      timer: 1200,
+      showConfirmButton: false
+    });
   };
 
   const getRolBadge = (rol = '') => {
-    const rolLower = rol.toLowerCase();
+    const rolLower = rol.toString().toLowerCase();
     if (rolLower.includes('admin') || rolLower.includes('director')) {
       return 'bg-purple-100 text-purple-800 border-purple-200';
     }
@@ -113,12 +175,11 @@ export default function GestionUsuariosPage() {
   };
 
   const usuariosActivosCount = usuarios.filter(u => u.activo).length;
-  const docentesCount = usuarios.filter(u => u.rol?.toLowerCase().includes('docente')).length;
-  const secretariaCount = usuarios.filter(u => u.rol?.toLowerCase().includes('secretaria')).length;
+  const docentesCount = usuarios.filter(u => u.rol?.toString().toLowerCase().includes('docente')).length;
+  const secretariaCount = usuarios.filter(u => u.rol?.toString().toLowerCase().includes('secretaria')).length;
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
-      {/* Encabezado */}
       <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <div className="flex items-center gap-2">
@@ -133,57 +194,42 @@ export default function GestionUsuariosPage() {
         </div>
 
         <Link
-          href="/dashboard/usuarios/nuevo"  // ← cambia a la ruta de creación real
+          href="/dashboard/usuarios/nuevo"
           className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm py-2.5 px-5 rounded-lg transition-colors shadow-sm flex items-center gap-2 shrink-0"
         >
           ➕ Registrar Nuevo Usuario
         </Link>
       </div>
 
-      {/* Resumen */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
           <p className="text-xs font-bold text-slate-400 uppercase">Total Usuarios Activos</p>
-          <p className="text-2xl font-bold text-slate-800 mt-1">
-            {loading ? '...' : usuariosActivosCount}
-          </p>
+          <p className="text-2xl font-bold text-slate-800 mt-1">{loading ? '...' : usuariosActivosCount}</p>
         </div>
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
           <p className="text-xs font-bold text-slate-400 uppercase">Docentes de Aula</p>
-          <p className="text-2xl font-bold text-blue-600 mt-1">
-            {loading ? '...' : docentesCount}
-          </p>
+          <p className="text-2xl font-bold text-blue-600 mt-1">{loading ? '...' : docentesCount}</p>
         </div>
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
           <p className="text-xs font-bold text-slate-400 uppercase">Personal de Secretaría</p>
-          <p className="text-2xl font-bold text-emerald-600 mt-1">
-            {loading ? '...' : secretariaCount}
-          </p>
+          <p className="text-2xl font-bold text-emerald-600 mt-1">{loading ? '...' : secretariaCount}</p>
         </div>
       </div>
 
-      {/* Tabla */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
           <h2 className="text-sm font-bold text-slate-700">Cuentas Registradas en el Sistema</h2>
-          <span className="text-xs text-slate-400 font-mono">
-            {loading ? 'Cargando...' : `Total: ${usuarios.length} registros`}
-          </span>
+          <span className="text-xs text-slate-400 font-mono">{loading ? 'Cargando...' : `Total: ${usuarios.length} registros`}</span>
         </div>
 
         {loading && (
-          <div className="p-8 text-center text-slate-500 text-sm">
-            ⏳ Cargando lista de usuarios desde PostgreSQL...
-          </div>
+          <div className="p-8 text-center text-slate-500 text-sm">⏳ Cargando lista de usuarios desde PostgreSQL...</div>
         )}
 
         {error && (
           <div className="p-6 bg-rose-50 text-rose-700 text-xs font-medium border-b border-rose-100 flex justify-between items-center">
             <span>⚠️ {error}</span>
-            <button
-              onClick={cargarUsuarios}
-              className="px-3 py-1 bg-rose-100 hover:bg-rose-200 rounded text-rose-800 font-bold transition-colors"
-            >
+            <button onClick={cargarDatos} className="px-3 py-1 bg-rose-100 hover:bg-rose-200 rounded text-rose-800 font-bold transition-colors">
               Reintentar
             </button>
           </div>
@@ -217,7 +263,6 @@ export default function GestionUsuariosPage() {
                       <tr key={usr.id} className="hover:bg-slate-50/80 transition-colors">
                         <td className="p-4 font-mono text-slate-600 font-medium">{usr.id}</td>
 
-                        {/* Nombre de usuario editable */}
                         <td className="p-4 font-mono text-xs">
                           {isEditing ? (
                             <input
@@ -233,12 +278,26 @@ export default function GestionUsuariosPage() {
                         </td>
 
                         <td className="p-4 text-center">
-                          <span className={`inline-block text-xs px-2.5 py-1 rounded-md font-semibold border ${getRolBadge(usr.rol)}`}>
-                            {usr.rol}
-                          </span>
+                          {isEditing ? (
+                            <select
+                              value={editForm.idRol}
+                              onChange={(e) => setEditForm(prev => ({ ...prev, idRol: e.target.value }))}
+                              className="text-xs px-2 py-1 border border-indigo-400 rounded bg-white font-medium text-black"
+                            >
+                              <option value="">Seleccionar rol...</option>
+                              {roles.map(rol => (
+                                <option key={rol.idRol} value={rol.idRol}>
+                                  {rol.nombre}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <span className={`inline-block text-xs px-2.5 py-1 rounded-md font-semibold border ${getRolBadge(usr.rol)}`}>
+                              {usr.rol}
+                            </span>
+                          )}
                         </td>
 
-                        {/* Estatus Editable */}
                         <td className="p-4 text-center">
                           {isEditing ? (
                             <select
@@ -269,7 +328,6 @@ export default function GestionUsuariosPage() {
                           )}
                         </td>
 
-                        {/* Botones de Acción */}
                         <td className="p-4 text-center">
                           {isEditing ? (
                             <div className="flex justify-center items-center gap-1">

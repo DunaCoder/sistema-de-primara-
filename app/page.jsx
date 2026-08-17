@@ -8,7 +8,8 @@ import { useAuth } from './context/AuthContext';
 export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false); // ← NUEVO: Estado para el ojito
+  const [showPassword, setShowPassword] = useState(false);
+
   const [error, setError] = useState('');
   const [isPending, setIsPending] = useState(false);
   
@@ -25,7 +26,6 @@ export default function LoginPage() {
       return;
     }
 
-    // Ejecutamos el Server Action directamente como una función
     const res = await loginAction(username, password);
 
     if (res.success) {
@@ -43,7 +43,9 @@ export default function LoginPage() {
         {/* Encabezado Institucional */}
         <div className="text-center mb-6">
           <span className="text-4xl">🏫</span>
-          <h1 className="text-xl font-bold text-slate-800 mt-2">Unidad Educativa Nacional Bicentenario Republicano</h1>
+          <h1 className="text-xl font-bold text-slate-800 mt-2">
+            Unidad Educativa Nacional Bicentenario Republicano
+          </h1>
           <p className="text-sm text-slate-500">Sistema de Control y Gestión Escolar</p>
         </div>
 
@@ -74,10 +76,9 @@ export default function LoginPage() {
             <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">
               Contraseña
             </label>
-            {/* CONTENEDOR RELATIVE PARA ALOJAR EL BOTÓN DEL OJITO */}
             <div className="relative">
               <input
-                type={showPassword ? "text" : "password"} // ← Cambia dinámicamente según el estado
+                type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
@@ -86,7 +87,7 @@ export default function LoginPage() {
               />
               <button
                 type="button"
-                onClick={() => setShowPassword(!showPassword)} // ← Alterna el valor al hacer clic
+                onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 focus:outline-none"
                 tabIndex={-1}
               >

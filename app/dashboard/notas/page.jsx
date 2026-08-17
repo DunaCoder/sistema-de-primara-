@@ -5,7 +5,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 
 export default function ConsultaNotasSecretariaPage() {
-  // Filtros de control (eliminamos 'momento' porque ahora se muestran todos juntos)
+  // Filtros de control
   const [grado, setGrado] = useState('1er Grado');
   const [seccion, setSeccion] = useState('A');
   const [materia, setMateria] = useState('Lengua y Comunicación');
@@ -33,7 +33,7 @@ export default function ConsultaNotasSecretariaPage() {
     { 
       id: 4, grado: '1er Grado', seccion: 'B', materia: 'Lengua y Comunicación', 
       cedula: 'E-84556677', nombre: 'Andrés Ignacio', apellido: 'Rivas Pérez', 
-      lapso1: 09, lapso2: 11, lapso3: 12, 
+      lapso1: 9, lapso2: 11, lapso3: 12, 
       apreciacion: 'Superó las dificultades iniciales con refuerzo académico.' 
     },
     { 
@@ -44,7 +44,7 @@ export default function ConsultaNotasSecretariaPage() {
     }
   ]);
 
-  // Filtrado reactivo (solo por Grado, Sección y Materia)
+  // Filtrado reactivo (por Grado, Sección y Materia)
   const estudiantesFiltrados = estudiantes.filter(
     est => est.grado === grado && 
            est.seccion === seccion && 
@@ -76,7 +76,7 @@ export default function ConsultaNotasSecretariaPage() {
         </Link>
       </div>
 
-      {/* Selectores / Filtros de Consulta (Reducidos a 3 para simplificar) */}
+      {/* Selectores / Filtros de Consulta */}
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
           <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Grado</label>
@@ -153,34 +153,28 @@ export default function ConsultaNotasSecretariaPage() {
                 </tr>
               ) : (
                 estudiantesFiltrados.map((est) => {
-                  // Cálculo matemático automático del promedio de los tres lapsos
                   const promedio = ((est.lapso1 + est.lapso2 + est.lapso3) / 3).toFixed(1);
                   const esAprobado = parseFloat(promedio) >= 10;
 
                   return (
                     <tr key={est.id} className="hover:bg-slate-50/80 transition-colors">
-                      {/* Datos del Estudiante */}
                       <td className="p-4">
                         <p className="font-semibold text-slate-800">{est.apellido}, {est.nombre}</p>
                         <p className="text-xs font-mono text-slate-500">{est.cedula}</p>
                       </td>
                       
-                      {/* Nota 1er Lapso */}
                       <td className="p-4 text-center font-mono font-medium text-slate-700">
                         {est.lapso1}
                       </td>
 
-                      {/* Nota 2do Lapso */}
                       <td className="p-4 text-center font-mono font-medium text-slate-700">
                         {est.lapso2}
                       </td>
 
-                      {/* Nota 3er Lapso */}
                       <td className="p-4 text-center font-mono font-medium text-slate-700">
                         {est.lapso3}
                       </td>
 
-                      {/* Total / Promedio Automático */}
                       <td className="p-4 text-center bg-slate-50/50">
                         <span className={`inline-block px-3 py-1 rounded-lg font-bold font-mono text-sm border ${
                           esAprobado 
@@ -191,9 +185,8 @@ export default function ConsultaNotasSecretariaPage() {
                         </span>
                       </td>
 
-                      {/* Apreciación */}
                       <td className="p-4 text-slate-600 text-xs italic">
-                        {est.apreciacion}
+                        {est.apreciacion || 'Sin observaciones registradas.'}
                       </td>
                     </tr>
                   );
@@ -203,7 +196,6 @@ export default function ConsultaNotasSecretariaPage() {
           </table>
         </div>
 
-        {/* Pie de página informativo */}
         <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
           <span>🔒 Cálculo automatizado de calificaciones por periodos académicos.</span>
         </div>
