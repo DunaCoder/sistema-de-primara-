@@ -26,18 +26,19 @@ export default function DashboardLayout({ children }) {
 
   if (!user) return null;
 
-  // 📌 Definición centralizada de todos los ítems del menú con sus roles
+  // 📌 Actualizado con 'Administrador' (coincidiendo con lo que muestra tu interfaz)
   const menuItems = [
-    { label: 'Inicio Dashboard', path: '/dashboard', icon: '🏠', roles: ['Admin', 'Secretaria', 'Docente', 'Coordinador'] },
-    { label: 'Asignar Materias', path: '/dashboard/asignaciones', icon: '📚', roles: ['Coordinador', 'Admin'] },
-    { label: 'Control de Estudios', path: '/dashboard/estudios', icon: '📂', roles: ['Admin'] },
+    { label: 'Inicio Dashboard', path: '/dashboard', icon: '🏠', roles: ['Administrador', 'Secretaria', 'Docente', 'Coordinador'] },
+    { label: 'Asignar Materias', path: '/dashboard/asignaciones', icon: '📚', roles: ['Coordinador', 'Administrador'] },
+    { label: 'Control de Estudios', path: '/dashboard/estudios', icon: '📂', roles: ['Administrador'] },
     { label: 'Inscribir Estudiante', path: '/dashboard/inscripciones', icon: '📝', roles: ['Secretaria'] },
     { label: 'Ver Matrícula', path: '/dashboard/estudiante', icon: '👥', roles: ['Secretaria'] },
     { label: 'Gestión de Estudiantes', path: '/dashboard/estudiantes/nuevo', icon: '👥', roles: ['Docente'] },
     { label: 'Gestión de Notas', path: '/dashboard/gestion', icon: '📝', roles: ['Docente'] },
     { label: 'Notas y Asistencia', path: '/dashboard/notas', icon: '📊', roles: ['Secretaria'] },
-    { label: 'Peticiones de Personal', path: '/dashboard/peticiones', icon: '📩', roles: ['Admin'] },
-    { label: 'Gestionar Usuarios', path: '/dashboard/usuarios', icon: '👤', roles: ['Admin'] },
+    { label: 'Peticiones de Personal', path: '/dashboard/peticiones', icon: '📩', roles: ['Administrador'] },
+    { label: 'Gestionar Usuarios', path: '/dashboard/usuarios', icon: '👤', roles: ['Administrador'] },
+    { label: 'Auditoría del Sistema', path: '/dashboard/auditoria', icon: '🛡️', roles: ['Administrador'] },
   ];
 
   // 🔍 Obtener el nombre del rol desde el usuario

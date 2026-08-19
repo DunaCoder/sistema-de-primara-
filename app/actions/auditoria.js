@@ -1,7 +1,6 @@
 'use server';
 
-import { prisma } from "@/lib/db";
-
+import { prisma } from "./lib/prisma";
 /**
  * Registra un evento en la tabla de bitácora
  */
