@@ -7,11 +7,19 @@ import pkg from "@prisma/client";
 
 const { PrismaClient } = pkg;
 
-// Levantamos el pool con el adapter compatible con tu entorno de Prisma 7
 const connectionString = `${process.env.DATABASE_URL}`;
 const pool = new Pool({ connectionString });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
+
+// Mapeo de rutas iniciales por rol
+const RUTAS_INICIALES = {
+  'Coordinador': '/dashboard/asignaciones',
+  'Administrador': '/dashboard',
+  'Admin': '/dashboard',
+  'Docente': '/dashboard/gestion',
+  'Secretaria': '/dashboard/inscripciones',
+};
 
 export async function loginAction(username, password) {
   try {
@@ -19,7 +27,7 @@ export async function loginAction(username, password) {
     const usuario = await prisma.usuario.findUnique({
       where: { username: username },
       include: {
-        rol: true, // 👈 Trae los datos de la tabla 'Rol'
+        rol: true,
       },
     });
 
@@ -32,7 +40,7 @@ export async function loginAction(username, password) {
       return { success: false, error: "Este usuario se encuentra inactivo." };
     }
 
-    // 3. Verificar contraseña (texto plano por ahora)
+    // 3. Verificar contraseña
     if (usuario.password !== password) {
       return { success: false, error: "Contraseña incorrecta." };
     }
@@ -42,13 +50,17 @@ export async function loginAction(username, password) {
       where: { idUsuario: usuario.idUsuario },
     });
 
-    // 5. Retornar datos con el nombre del rol en texto
+    const nombreRol = usuario.rol?.nombre || '';
+    const redirectUrl = RUTAS_INICIALES[nombreRol] || '/dashboard';
+
+    // 5. Retornar datos con rol y ruta de redirección automática
     return {
       success: true,
+      redirectUrl,
       user: {
         idUsuario: usuario.idUsuario,
         username: usuario.username,
-        rol: usuario.rol.nombre, // 👈 Aquí está el cambio clave
+        rol: nombreRol,
         nombreCompleto: datosPersonales
           ? `${datosPersonales.nombre} ${datosPersonales.apellido}`
           : "Usuario del Sistema",

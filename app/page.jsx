@@ -108,7 +108,7 @@ export default function LoginPage() {
         <div className="text-center mt-6 pt-4 border-t border-slate-100">
           <p className="text-xs text-slate-400">
             Cuentas de prueba del seed: <br />
-            <span className="font-mono text-slate-500">admin | docente | secretaria</span>
+            <span className="font-mono text-slate-500">admin | coordinador | docente | secretaria</span>
           </p>
         </div>
 

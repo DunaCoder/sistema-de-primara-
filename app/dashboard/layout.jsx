@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 import { useAuth } from '../context/AuthContext';
 import { useRouter, usePathname } from 'next/navigation';
@@ -28,10 +28,11 @@ export default function DashboardLayout({ children }) {
 
   // 📌 Definición centralizada de todos los ítems del menú con sus roles
   const menuItems = [
-    { label: 'Inicio Dashboard', path: '/dashboard', icon: '🏠', roles: ['Admin', 'Secretaria', 'Docente'] },
+    { label: 'Inicio Dashboard', path: '/dashboard', icon: '🏠', roles: ['Admin', 'Secretaria', 'Docente', 'Coordinador'] },
+    { label: 'Asignar Materias', path: '/dashboard/asignaciones', icon: '📚', roles: ['Coordinador', 'Admin'] },
     { label: 'Control de Estudios', path: '/dashboard/estudios', icon: '📂', roles: ['Admin'] },
-    { label: 'Inscribir Alumno', path: '/dashboard/inscripciones', icon: '📝', roles: ['Secretaria'] },
-    { label: 'Ver Matrícula', path: '/dashboard/alumnos', icon: '👥', roles: ['Secretaria'] },
+    { label: 'Inscribir Estudiante', path: '/dashboard/inscripciones', icon: '📝', roles: ['Secretaria'] },
+    { label: 'Ver Matrícula', path: '/dashboard/estudiante', icon: '👥', roles: ['Secretaria'] },
     { label: 'Gestión de Estudiantes', path: '/dashboard/estudiantes/nuevo', icon: '👥', roles: ['Docente'] },
     { label: 'Gestión de Notas', path: '/dashboard/gestion', icon: '📝', roles: ['Docente'] },
     { label: 'Notas y Asistencia', path: '/dashboard/notas', icon: '📊', roles: ['Secretaria'] },
@@ -39,7 +40,7 @@ export default function DashboardLayout({ children }) {
     { label: 'Gestionar Usuarios', path: '/dashboard/usuarios', icon: '👤', roles: ['Admin'] },
   ];
 
-  // 🔍 Obtener el nombre del rol desde el usuario (soporta string u objeto con .nombre)
+  // 🔍 Obtener el nombre del rol desde el usuario
   const userRol = typeof user.rol === 'string' ? user.rol : user.rol?.nombre || '';
 
   return (
@@ -60,7 +61,6 @@ export default function DashboardLayout({ children }) {
           <nav className="flex flex-col gap-1.5 pt-2">
             <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold px-2 mb-1">Módulos</span>
             {menuItems.map((item) => {
-              // ❌ Si el usuario no tiene el rol necesario, no mostrar este ítem
               if (!item.roles.includes(userRol)) return null;
               const isActive = pathname === item.path;
               return (
