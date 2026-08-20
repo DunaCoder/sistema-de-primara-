@@ -1,10 +1,14 @@
 // app/actions/roles.js
-'use server'
+'use server';
 
-import { Pool } from "pg";
-import { PrismaPg } from "@prisma/adapter-pg";
-import pkg from "@prisma/client";
-
+export async function obtenerRoles() {
+  return [
+    { id: 1, nombre: 'Docente' },
+    { id: 2, nombre: 'Secretaria' },
+    { id: 3, nombre: 'Coordinador' },
+    { id: 4, nombre: 'Administrador' },
+  ];
+}
 const { PrismaClient } = pkg;
 
 const connectionString = `${process.env.DATABASE_URL}`;

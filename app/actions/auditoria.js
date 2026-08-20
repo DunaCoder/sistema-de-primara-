@@ -1,16 +1,14 @@
 'use server';
 
-import { prisma } from "./lib/prisma";
-/**
- * Registra un evento en la tabla de bitácora
- */
+import { prisma } from "@/lib/prisma";
+
 export async function registrarAuditoria({ usuarioId, usuarioNombre, rol, accion, modulo, detalles }) {
   try {
     await prisma.bitacora.create({
       data: {
-        usuarioId,
-        usuarioNombre,
-        rol,
+        usuarioId: usuarioId ? String(usuarioId) : null,
+        usuarioNombre: usuarioNombre || 'SISTEMA',
+        rol: rol || 'ADMINISTRADOR',
         accion,
         modulo,
         detalles,
@@ -19,22 +17,18 @@ export async function registrarAuditoria({ usuarioId, usuarioNombre, rol, accion
     return { success: true };
   } catch (error) {
     console.error("Error al registrar auditoría:", error);
-    return { success: false, error: error.message };
+    return { success: false, error: "No se pudo registrar la bitácora." };
   }
 }
 
-/**
- * Consulta los últimos 100 eventos para la vista del Administrador
- */
 export async function obtenerAuditoria() {
   try {
     const logs = await prisma.bitacora.findMany({
       orderBy: { fecha: 'desc' },
-      take: 100,
     });
     return { success: true, logs };
   } catch (error) {
-    console.error("Error al consultar bitácora:", error);
-    return { success: false, logs: [] };
+    console.error("Error al obtener auditoría:", error);
+    return { success: false, error: "No se pudieron obtener los registros de auditoría." };
   }
 }

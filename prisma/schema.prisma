@@ -3,8 +3,7 @@ datasource db {
 }
 
 generator client {
-  provider        = "prisma-client-js"
-
+  provider = "prisma-client-js"
 }
 
 // ==========================================
@@ -18,74 +17,66 @@ model Usuario {
   estado    Boolean @default(true)
 
   // Relación con Rol
-  idRol     Int     @map("id_rol")
-  rol       Rol     @relation(fields: [idRol], references: [idRol], onDelete: Restrict)
+  idRol Int @map("id_rol")
+  rol   Rol @relation(fields: [idRol], references: [idRol], onDelete: Restrict)
 
-  personal  Personal? // 1:1 opcional
+  personal Personal? // Relación 1:1 opcional
 
   @@map("usuarios")
 }
 
 model Personal {
-  idPersonal   String   @id @map("id_personal") // Cédula/DNI
+  idPersonal   String    @id @map("id_personal") // Cédula
   nombre       String
   apellido     String
-  fechaIngreso DateTime @map("fecha_ingreso") @db.Date
-  idUsuario    Int?     @unique @map("id_usuario") // FK a Usuario (opcional)
+  fechaIngreso DateTime? @map("fecha_ingreso") @db.Date
+  idUsuario    Int?      @unique @map("id_usuario") // FK a Usuario (opcional)
 
-  // Relación 1:1 con Usuario (opcional)
-  usuario      Usuario? @relation(fields: [idUsuario], references: [idUsuario], onDelete: SetNull)
+  // Relación 1:1 con Usuario
+  usuario Usuario? @relation(fields: [idUsuario], references: [idUsuario], onDelete: SetNull)
 
-  // Relación 1:N con GradoSeccion (docente guía de varias secciones)
+  // Relaciones con Grado y Asignaciones
   gradosSecciones GradoSeccion[]
-
-  // Relación 1:N con AsignacionDocente (docente puede tener varias asignaciones)
   asignaciones    AsignacionDocente[]
 
   @@map("personal")
 }
 
 model Representante {
-  idRepresentante String       @id @map("id_representante") // Cédula/DNI
+  idRepresentante String @id @map("id_representante") // Cédula
   nombre          String
   apellido        String
   telefono        String
-  direccion       String       @db.Text
+  direccion       String @db.Text
 
-  // Relación 1:N con Estudiante
-  estudiantes     Estudiante[]
+  estudiantes Estudiante[]
 
   @@map("representantes")
 }
 
 model Estudiante {
-  idEstudiante    String       @id @map("id_estudiante") // Cédula de Identidad o ID
-  nacionalidad    String       @default("V") @db.VarChar(1) // 'V' o 'E'
-  cedulaEscolar   String?      @map("cedula_escolar") @db.VarChar(12) // 12 dígitos
+  idEstudiante    String   @id @map("id_estudiante") // Cédula o ID
+  nacionalidad    String   @default("V") @db.VarChar(1)
+  cedulaEscolar   String?  @map("cedula_escolar") @db.VarChar(12)
   nombre          String
   apellido        String
-  fechaNacimiento DateTime     @map("fecha_nacimiento") @db.Date
-  idRepresentante String       @map("id_representante") // FK a Representante
+  fechaNacimiento DateTime @map("fecha_nacimiento") @db.Date
+  idRepresentante String   @map("id_representante")
 
-  // Relación N:1 con Representante
-  representante   Representante @relation(fields: [idRepresentante], references: [idRepresentante], onDelete: Restrict)
-
-  // Relación 1:N con Inscripcion
-  inscripciones   Inscripcion[]
+  representante Representante @relation(fields: [idRepresentante], references: [idRepresentante], onDelete: Restrict)
+  inscripciones Inscripcion[]
 
   @@map("estudiantes")
 }
 
 model GradoSeccion {
-  idGradoSeccion Int    @id @default(autoincrement()) @map("id_grado_seccion")
-  grado          String // Ej: "1er Grado"
-  seccion        String // Ej: "A"
-  idDocenteGuia String @map("id_docente_guia") // FK a Personal (docente guía)
+  idGradoSeccion Int     @id @default(autoincrement()) @map("id_grado_seccion")
+  grado          String  // Ej: "1er Grado"
+  seccion        String  // Ej: "A"
+  idDocenteGuia  String? @map("id_docente_guia") // Opcional para evitar bloqueos al crear la sección
 
-  // Relación N:1 con Personal
-  docenteGuia Personal @relation(fields: [idDocenteGuia], references: [idPersonal], onDelete: Restrict)
+  docenteGuia Personal? @relation(fields: [idDocenteGuia], references: [idPersonal], onDelete: SetNull)
 
-  // Relaciones 1:N
   inscripciones Inscripcion[]
   asignaciones  AsignacionDocente[]
 
@@ -146,13 +137,12 @@ model AsignacionDocente {
 // ==========================================
 
 model Inscripcion {
-  idInscripcion    Int                   @id @default(autoincrement()) @map("id_inscripcion")
-  idEstudiante     String                @map("id_estudiante") // FK a Estudiante
-  idGradoSeccion   Int                   @map("id_grado_seccion") // FK a GradoSeccion
-  añoEscolar       String                @map("año_escolar")
-  fechaInscripcion DateTime              @default(now()) @map("fecha_inscripcion") @db.Date
+  idInscripcion    Int      @id @default(autoincrement()) @map("id_inscripcion")
+  idEstudiante     String   @map("id_estudiante")
+  idGradoSeccion   Int      @map("id_grado_seccion")
+  añoEscolar       String   @map("año_escolar")
+  fechaInscripcion DateTime @default(now()) @map("fecha_inscripcion") @db.Date
 
-  // Relaciones N:1
   estudiante   Estudiante   @relation(fields: [idEstudiante], references: [idEstudiante], onDelete: Cascade)
   gradoSeccion GradoSeccion @relation(fields: [idGradoSeccion], references: [idGradoSeccion], onDelete: Restrict)
 
@@ -162,12 +152,12 @@ model Inscripcion {
 }
 
 model EvaluacionCualitativa {
-  idEvaluacion           Int         @id @default(autoincrement()) @map("id_evaluacion")
-  idInscripcion          Int         @map("id_inscripcion")
-  idMateria              Int         @map("id_materia")
+  idEvaluacion           Int     @id @default(autoincrement()) @map("id_evaluacion")
+  idInscripcion          Int     @map("id_inscripcion")
+  idMateria              Int     @map("id_materia")
   lapso                  Int
-  literalCalificacion    String      @map("literal_calificacion")
-  apreciacionDescriptiva String?     @db.Text @map("apreciacion_descriptiva")
+  literalCalificacion    String  @map("literal_calificacion")
+  apreciacionDescriptiva String? @db.Text @map("apreciacion_descriptiva")
 
   inscripcion Inscripcion @relation(fields: [idInscripcion], references: [idInscripcion], onDelete: Cascade)
   materia     Materia     @relation(fields: [idMateria], references: [idMateria], onDelete: Cascade)

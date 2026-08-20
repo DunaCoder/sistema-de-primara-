@@ -26,23 +26,65 @@ export default function DashboardLayout({ children }) {
 
   if (!user) return null;
 
-  // 📌 Actualizado con 'Administrador' (coincidiendo con lo que muestra tu interfaz)
-  const menuItems = [
-    { label: 'Inicio Dashboard', path: '/dashboard', icon: '🏠', roles: ['Administrador', 'Secretaria', 'Docente', 'Coordinador'] },
-    { label: 'Asignar Materias', path: '/dashboard/asignaciones', icon: '📚', roles: ['Coordinador', 'Administrador'] },
-    { label: 'Control de Estudios', path: '/dashboard/estudios', icon: '📂', roles: ['Administrador'] },
-    { label: 'Inscribir Estudiante', path: '/dashboard/inscripciones', icon: '📝', roles: ['Secretaria'] },
-    { label: 'Ver Matrícula', path: '/dashboard/estudiante', icon: '👥', roles: ['Secretaria'] },
-    { label: 'Gestión de Estudiantes', path: '/dashboard/estudiantes/nuevo', icon: '👥', roles: ['Docente'] },
-    { label: 'Gestión de Notas', path: '/dashboard/gestion', icon: '📝', roles: ['Docente'] },
-    { label: 'Notas y Asistencia', path: '/dashboard/notas', icon: '📊', roles: ['Secretaria'] },
-    { label: 'Peticiones de Personal', path: '/dashboard/peticiones', icon: '📩', roles: ['Administrador'] },
-    { label: 'Gestionar Usuarios', path: '/dashboard/usuarios', icon: '👤', roles: ['Administrador'] },
-    { label: 'Auditoría del Sistema', path: '/dashboard/auditoria', icon: '🛡️', roles: ['Administrador'] },
-  ];
+  // Normalizar el rol ignorando espacios extra o diferencias de mayúsculas
+  const rolBruto = typeof user.rol === 'string' ? user.rol : user.rol?.nombre || '';
+  const userRol = rolBruto.trim();
 
-  // 🔍 Obtener el nombre del rol desde el usuario
-  const userRol = typeof user.rol === 'string' ? user.rol : user.rol?.nombre || '';
+  // 📌 Mapeo corregido: Secretaría solo actúa como Data Entry
+  const menuItems = [
+    { 
+      label: 'Inicio Dashboard', 
+      path: '/dashboard', 
+      icon: '🏠', 
+      roles: ['Administrador', 'ADMINISTRADOR', 'Secretaria', 'SECRETARIA', 'Docente', 'DOCENTE', 'Coordinador', 'COORDINADOR'] 
+    },
+    // --- MÓDULOS DEL ADMINISTRADOR (TÉCNICO / AUDITOR) ---
+    { 
+      label: 'Gestionar Usuarios', 
+      path: '/dashboard/usuarios', 
+      icon: '👤', 
+      roles: ['Administrador', 'ADMINISTRADOR'] 
+    },
+    { 
+      label: 'Auditoría del Sistema', 
+      path: '/dashboard/auditoria', 
+      icon: '🛡️', 
+      roles: ['Administrador', 'ADMINISTRADOR'] 
+    },
+    // --- MÓDULOS DEL COORDINADOR (ESTRUCTURA Y ASIGNACIÓN) ---
+    { 
+      label: 'Asignar Materias', 
+      path: '/dashboard/asignaciones', 
+      icon: '📚', 
+      roles: ['Coordinador', 'COORDINADOR'] 
+    },
+    // --- MÓDULOS DE SECRETARÍA (DATA ENTRY / REGISTRO MATRÍCULA) ---
+    { 
+      label: 'Inscribir Estudiante', 
+      path: '/dashboard/inscripciones', 
+      icon: '📝', 
+      roles: ['Secretaria', 'SECRETARIA'] 
+    },
+    { 
+      label: 'Ver Matrícula', 
+      path: '/dashboard/estudiante', 
+      icon: '👥', 
+      roles: ['Secretaria', 'SECRETARIA'] 
+    },
+    // --- MÓDULOS DEL DOCENTE (EVALUACIÓN Y CALIFICACIONES) ---
+    { 
+      label: 'Gestión de Estudiantes', 
+      path: '/dashboard/estudiantes/nuevo', 
+      icon: '👥', 
+      roles: ['Docente', 'DOCENTE'] 
+    },
+    { 
+      label: 'Gestión de Notas', 
+      path: '/dashboard/gestion', 
+      icon: '📝', 
+      roles: ['Docente', 'DOCENTE'] 
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col md:flex-row">
@@ -56,7 +98,7 @@ export default function DashboardLayout({ children }) {
           <div className="bg-slate-800 p-3 rounded-lg border border-slate-700">
             <p className="text-xs text-slate-400">Usuario:</p>
             <p className="text-sm font-bold text-emerald-400 truncate">{user.nombreCompleto || user.username}</p>
-            <p className="text-xs text-slate-400 mt-1">Rol: <span className="text-indigo-300">{userRol}</span></p>
+            <p className="text-xs text-slate-400 mt-1">Rol: <span className="text-indigo-300 font-semibold">{userRol}</span></p>
           </div>
 
           <nav className="flex flex-col gap-1.5 pt-2">
@@ -80,7 +122,7 @@ export default function DashboardLayout({ children }) {
           </nav>
         </div>
 
-        <button onClick={logout} className="w-full bg-rose-600 hover:bg-rose-700 text-white font-medium text-sm py-2.5 rounded-lg transition-colors shadow-sm">
+        <button onClick={logout} className="w-full bg-rose-600 hover:bg-rose-700 text-white font-medium text-sm py-2.5 rounded-lg transition-colors shadow-sm mt-6">
           Cerrar Sesión 🚪
         </button>
       </aside>

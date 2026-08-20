@@ -72,7 +72,7 @@ export default function ConsultaNotasSecretariaPage() {
           href="/dashboard/inscripciones" 
           className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm py-2 px-4 rounded-lg transition-colors shadow-sm flex items-center gap-2 shrink-0"
         >
-          ➕ Inscribir Alumno
+          ➕ Inscribir Estudiante
         </Link>
       </div>
 
@@ -128,7 +128,7 @@ export default function ConsultaNotasSecretariaPage() {
             <p className="text-xs text-slate-500">Visualización simultánea de 1er, 2do y 3er Lapso</p>
           </div>
           <span className="text-xs font-mono bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-md border border-indigo-100 font-semibold">
-            Matrícula: {estudiantesFiltrados.length} Alumnos
+            Matrícula: {estudiantesFiltrados.length} Estudiantes
           </span>
         </div>
 

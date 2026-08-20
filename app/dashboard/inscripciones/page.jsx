@@ -13,6 +13,9 @@ import 'flatpickr/dist/flatpickr.min.css';
 function DatePickerEspanol({ value, onChange }) {
   const inputRef = useRef(null);
   const fpRef = useRef(null);
+  
+  // Guardamos el valor inicial en una referencia para evitar re-crear Flatpickr si cambia 'value'
+  const initialValueRef = useRef(value);
 
   useEffect(() => {
     if (!inputRef.current) return;
@@ -20,7 +23,7 @@ function DatePickerEspanol({ value, onChange }) {
     fpRef.current = flatpickr(inputRef.current, {
       locale: Spanish,
       dateFormat: 'd/m/Y',
-      defaultDate: value || null,
+      defaultDate: initialValueRef.current || null,
       onChange: (_, dateStr) => {
         onChange(dateStr);
       },
@@ -29,7 +32,7 @@ function DatePickerEspanol({ value, onChange }) {
     return () => {
       if (fpRef.current) fpRef.current.destroy();
     };
-  }, []);
+  }, [onChange]);
 
   useEffect(() => {
     if (fpRef.current && value !== undefined) {

@@ -1,12 +1,10 @@
-// app/actions.js
 'use server'
 
-import { prisma } from '@/lib/db'
+import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 
 /**
  * MÓDULO DE CONTROL DE USUARIOS
- * Simulación rápida de autenticación para la defensa del proyecto
  */
 export async function loginAction(formData) {
   const username = formData.get('username')
@@ -20,7 +18,6 @@ export async function loginAction(formData) {
     return { success: false, error: "Credenciales inválidas" }
   }
 
-  // Retornamos los datos públicos del usuario para el estado de la aplicación
   return { 
     success: true, 
     user: { nombre: usuario.nombre, rol: usuario.rol } 
@@ -37,9 +34,8 @@ export async function registrarEstudiante(formData) {
   const apellidos = formData.get('apellidos')
   const grado = formData.get('grado')
   const seccion = formData.get('seccion')
-  const nivelEducativo = formData.get('nivelEducativo') // "Inicial" o "Básica"
+  const nivelEducativo = formData.get('nivelEducativo')
 
-  // Estructuramos los datos del representante para cumplir con el diseño técnico (JSONB)
   const datosRepresentante = {
     nombre: formData.get('nombreRepresentante'),
     cedula: formData.get('cedulaRepresentante'),
@@ -55,11 +51,10 @@ export async function registrarEstudiante(formData) {
         grado,
         seccion,
         nivelEducativo,
-        representante: datosRepresentante // Prisma mapea esto automáticamente a JSONB en Postgres
+        representante: datosRepresentante
       }
     })
     
-    // Esto refresca la vista automáticamente para mostrar al nuevo alumno en las tablas
     revalidatePath('/dashboard/control-escolar')
     return { success: true }
   } catch (error) {
@@ -75,10 +70,7 @@ export async function registrarEstudiante(formData) {
 export async function guardarCalificacion(datos) {
   const { estudianteId, asignatura, lapso, notaNum, notaLit } = datos
 
-  // Convertimos la nota numérica a entero si viene en el envío (Básica)
   const scoreNum = notaNum ? parseInt(notaNum, 10) : null
-  
-  // Si es cuantitativa, calculamos un promedio base directo para cumplir con los requerimientos del sistema
   const promedioCalculado = scoreNum ? parseFloat(scoreNum) : null
 
   try {
