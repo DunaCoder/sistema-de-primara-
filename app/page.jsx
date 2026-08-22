@@ -2,8 +2,13 @@
 'use client'
 
 import { useState } from 'react';
+<<<<<<< HEAD
 import { loginAction } from '@/actions/auth';
 import { useAuth } from '@/app/context/AuthContext';
+=======
+import { loginAction } from './actions/auth';
+import { useAuth } from './context/AuthContext';
+>>>>>>> 6054ec0a436990851085ee50f6fe9cc47a2fac99
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');

@@ -8,7 +8,11 @@ import {
   obtenerRoles, 
   actualizarUsuario, 
   cambiarEstadoUsuario 
+<<<<<<< HEAD
 } from '@/actions/usuarios';
+=======
+} from '../../actions/usuarios';
+>>>>>>> 6054ec0a436990851085ee50f6fe9cc47a2fac99
 
 export default function UsuariosPage() {
   const [formData, setFormData] = useState({

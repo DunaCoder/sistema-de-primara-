@@ -4,6 +4,10 @@
     "paths": {
       "@/*": ["./*"]
     }
+<<<<<<< HEAD
   },
   "exclude": ["node_modules", ".next"]
+=======
+  }
+>>>>>>> 6054ec0a436990851085ee50f6fe9cc47a2fac99
 }
