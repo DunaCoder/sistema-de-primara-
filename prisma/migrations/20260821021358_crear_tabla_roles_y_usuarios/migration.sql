@@ -1,0 +1,2 @@
+-- RenameIndex
+ALTER INDEX "asignaciones_docentes_id_docente_id_grado_seccion_id_materia_ke" RENAME TO "asignaciones_docentes_id_docente_id_grado_seccion_id_materi_key";

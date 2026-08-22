@@ -1,0 +1,154 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  idUsuario Int       @id @default(autoincrement()) @map("id_usuario")
+  username  String    @unique
+  password  String
+  estado    Boolean   @default(true)
+  idRol     Int       @map("id_rol")
+  personal  Personal?
+  rol       Rol       @relation(fields: [idRol], references: [idRol])
+
+  @@map("usuarios")
+}
+
+model Personal {
+  idPersonal           String              @id @map("id_personal")
+  nombre               String
+  apellido             String
+  fechaIngreso         DateTime            @map("fecha_ingreso") @db.Date
+  idUsuario            Int?                @unique @map("id_usuario")
+  asignacionesDocentes AsignacionDocente[]
+  gradosSecciones      GradoSeccion[]
+  usuario              Usuario?            @relation(fields: [idUsuario], references: [idUsuario])
+
+  @@map("personal")
+}
+
+model Representante {
+  idRepresentante String       @id @map("id_representante")
+  nombre          String
+  apellido        String
+  telefono        String
+  email           String?      @db.VarChar(150)
+  direccion       String
+  estudiantes     Estudiante[]
+
+  @@map("representantes")
+}
+
+model Estudiante {
+  idEstudiante    String        @id @map("id_estudiante")
+  nacionalidad    String        @default("V") @db.VarChar(1)
+  cedulaEscolar   String?       @map("cedula_escolar") @db.VarChar(12)
+  nombre          String
+  apellido        String
+  fechaNacimiento DateTime      @map("fecha_nacimiento") @db.Date
+  idRepresentante String        @map("id_representante")
+  representante   Representante @relation(fields: [idRepresentante], references: [idRepresentante])
+  inscripciones   Inscripcion[]
+
+  @@map("estudiantes")
+}
+
+model GradoSeccion {
+  idGradoSeccion       Int                 @id @default(autoincrement()) @map("id_grado_seccion")
+  grado                String
+  seccion              String
+  idDocenteGuia        String              @map("id_docente_guia")
+  asignacionesDocentes AsignacionDocente[]
+  docenteGuia          Personal            @relation(fields: [idDocenteGuia], references: [idPersonal])
+  inscripciones        Inscripcion[]
+
+  @@map("grados_secciones")
+}
+
+model Materia {
+  idMateria                Int                     @id @default(autoincrement()) @map("id_materia")
+  nombre                   String
+  descripcion              String?
+  asignacionesDocentes     AsignacionDocente[]
+  evaluacionesCualitativas EvaluacionCualitativa[]
+  gradosMaterias           GradoMateria[]
+
+  @@map("materias")
+}
+
+model GradoMateria {
+  idGradoMateria Int     @id @default(autoincrement()) @map("id_grado_materia")
+  grado          String
+  idMateria      Int     @map("id_materia")
+  materia        Materia @relation(fields: [idMateria], references: [idMateria], onDelete: Cascade)
+
+  @@unique([grado, idMateria])
+  @@map("grados_materias")
+}
+
+model Rol {
+  idRol    Int       @id @default(autoincrement()) @map("id_rol")
+  nombre   String    @unique
+  usuarios Usuario[]
+
+  @@map("roles")
+}
+
+model AsignacionDocente {
+  idAsignacion   Int          @id @default(autoincrement()) @map("id_asignacion")
+  idDocente      String       @map("id_docente")
+  idGradoSeccion Int          @map("id_grado_seccion")
+  idMateria      Int          @map("id_materia")
+  docente        Personal     @relation(fields: [idDocente], references: [idPersonal], onDelete: Cascade)
+  gradoSeccion   GradoSeccion @relation(fields: [idGradoSeccion], references: [idGradoSeccion], onDelete: Cascade)
+  materia        Materia      @relation(fields: [idMateria], references: [idMateria], onDelete: Cascade)
+
+  @@unique([idDocente, idGradoSeccion, idMateria])
+  @@map("asignaciones_docentes")
+}
+
+model Inscripcion {
+  idInscripcion            Int                     @id @default(autoincrement()) @map("id_inscripcion")
+  idEstudiante             String                  @map("id_estudiante")
+  idGradoSeccion           Int                     @map("id_grado_seccion")
+  anioEscolar              String                  @map("anio_escolar")
+  fechaInscripcion         DateTime                @default(now()) @map("fecha_inscripcion") @db.Date
+  evaluacionesCualitativas EvaluacionCualitativa[]
+  estudiante               Estudiante              @relation(fields: [idEstudiante], references: [idEstudiante], onDelete: Cascade)
+  gradoSeccion             GradoSeccion            @relation(fields: [idGradoSeccion], references: [idGradoSeccion])
+
+  @@unique([idEstudiante, anioEscolar])
+  @@map("inscripciones")
+}
+
+model EvaluacionCualitativa {
+  idEvaluacion           Int         @id @default(autoincrement()) @map("id_evaluacion")
+  idInscripcion          Int         @map("id_inscripcion")
+  idMateria              Int         @map("id_materia")
+  lapso                  Int
+  literalCalificacion    String      @map("literal_calificacion")
+  apreciacionDescriptiva String?     @map("apreciacion_descriptiva")
+  inscripcion            Inscripcion @relation(fields: [idInscripcion], references: [idInscripcion], onDelete: Cascade)
+  materia                Materia     @relation(fields: [idMateria], references: [idMateria], onDelete: Cascade)
+
+  @@unique([idInscripcion, lapso, idMateria])
+  @@map("evaluaciones_cualitativas")
+}
+
+model Bitacora {
+  id            Int      @id @default(autoincrement())
+  usuarioId     Int?     @map("usuario_id")
+  usuarioNombre String   @map("usuario_nombre")
+  rol           String
+  accion        String
+  modulo        String
+  detalles      String
+  fecha         DateTime @default(now())
+
+  @@map("bitacora")
+}
