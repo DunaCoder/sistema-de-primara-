@@ -1,73 +1,170 @@
-// app/actions/auth.js
-'use server'
+'use server';
 
-import { Pool } from "pg";
-import { PrismaPg } from "@prisma/adapter-pg";
-import pkg from "@prisma/client";
+import { prisma } from '@/app/lib/prisma';
+import bcrypt from 'bcryptjs';
 
-const { PrismaClient } = pkg;
+// Detectar automáticamente el modelo de Usuario en Prisma
+const getModeloUsuario = () => {
+  if (prisma.usuario) return prisma.usuario;
+  if (prisma.usuarios) return prisma.usuarios;
+  if (prisma.Usuario) return prisma.Usuario;
+  if (prisma.Usuarios) return prisma.Usuarios;
+  throw new Error('No se encontró el modelo de Usuario en el cliente de Prisma.');
+};
 
-const connectionString = `${process.env.DATABASE_URL}`;
-const pool = new Pool({ connectionString });
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
-
-// Mapeo de rutas iniciales por rol
-const RUTAS_INICIALES = {
-  'Coordinador': '/dashboard/asignaciones',
-  'Administrador': '/dashboard',
-  'Admin': '/dashboard',
-  'Docente': '/dashboard/gestion',
-  'Secretaria': '/dashboard/inscripciones',
+// Detectar automáticamente el modelo de Bitácora
+const getModeloBitacora = () => {
+  if (prisma.bitacora) return prisma.bitacora;
+  if (prisma.bitacoras) return prisma.bitacoras;
+  if (prisma.Bitacora) return prisma.Bitacora;
+  return null;
 };
 
 export async function loginAction(username, password) {
   try {
-    // 1. Buscar al usuario incluyendo su rol relacionado
-    const usuario = await prisma.usuario.findUnique({
-      where: { username: username },
+    const ModeloUsuario = getModeloUsuario();
+
+    // 1. Buscar usuario
+    const usuario = await ModeloUsuario.findFirst({
+      where: {
+        username: {
+          equals: username.trim(),
+          mode: 'insensitive',
+        },
+      },
       include: {
         rol: true,
       },
     });
 
-    // 2. Validaciones básicas
     if (!usuario) {
-      return { success: false, error: "El usuario no existe." };
+      return { success: false, error: 'El usuario ingresado no existe.' };
     }
 
-    if (!usuario.estado) {
-      return { success: false, error: "Este usuario se encuentra inactivo." };
+    // Comprobar estado si existe la columna
+    if (usuario.estado === false) {
+      return { success: false, error: 'El usuario se encuentra inactivo.' };
     }
 
-    // 3. Verificar contraseña
-    if (usuario.password !== password) {
-      return { success: false, error: "Contraseña incorrecta." };
+    // 2. Validar contraseña (compatible con bcrypt y texto plano)
+    const userPass = usuario.password || usuario.clave || '';
+    let esValida = false;
+
+    if (userPass.startsWith('$2a$') || userPass.startsWith('$2b$')) {
+      esValida = await bcrypt.compare(password, userPass);
+    } else {
+      esValida = userPass === password;
     }
 
-    // 4. Buscar datos personales (opcional)
-    const datosPersonales = await prisma.personal.findUnique({
-      where: { idUsuario: usuario.idUsuario },
-    });
+    if (!esValida) {
+      return { success: false, error: 'Contraseña incorrecta.' };
+    }
 
-    const nombreRol = usuario.rol?.nombre || '';
-    const redirectUrl = RUTAS_INICIALES[nombreRol] || '/dashboard';
+    // Detectar campos de ID y Banderas según la convención del esquema
+    const id = usuario.id_usuario ?? usuario.idUsuario ?? usuario.id;
+    const debeCambiar = usuario.debe_cambiar_password ?? usuario.debeCambiarPassword ?? false;
+    const nombreRol = usuario.rol?.nombre || 'Usuario';
 
-    // 5. Retornar datos con rol y ruta de redirección automática
     return {
       success: true,
-      redirectUrl,
       user: {
-        idUsuario: usuario.idUsuario,
+        id,
         username: usuario.username,
         rol: nombreRol,
-        nombreCompleto: datosPersonales
-          ? `${datosPersonales.nombre} ${datosPersonales.apellido}`
-          : "Usuario del Sistema",
+        debeCambiarPassword: debeCambiar,
       },
     };
   } catch (error) {
-    console.error("❌ Error en loginAction:", error);
-    return { success: false, error: "Error interno en el servidor." };
+    console.error('❌ Error en loginAction:', error);
+    return { 
+      success: false, 
+      error: error.message || 'Error al conectar con la base de datos.' 
+    };
+  }
+}
+
+export async function cambiarPasswordObligatorioAction(idUsuario, nuevaPassword, username, rolNombre) {
+  try {
+    const ModeloUsuario = getModeloUsuario();
+    const ModeloBitacora = getModeloBitacora();
+
+    const hashedPassword = await bcrypt.hash(nuevaPassword, 10);
+
+    // 1. Obtener la clave primaria directamente buscando al usuario por su username
+    const usuarioActual = await ModeloUsuario.findFirst({
+      where: {
+        username: {
+          equals: username.trim(),
+          mode: 'insensitive',
+        },
+      },
+    });
+
+    if (!usuarioActual) {
+      return { success: false, error: 'No se encontró el registro del usuario en la base de datos.' };
+    }
+
+    // Identificar la propiedad de ID que existe en el objeto devuelto por Prisma
+    const campoId = usuarioActual.id_usuario !== undefined ? 'id_usuario' : 
+                    usuarioActual.idUsuario !== undefined ? 'idUsuario' : 'id';
+    
+    const idValor = usuarioActual[campoId];
+
+    // 2. Intentar actualización dinámicamente según el nombre de la columna de la bandera
+    let usuarioActualizado = null;
+
+    try {
+      usuarioActualizado = await ModeloUsuario.update({
+        where: { [campoId]: idValor },
+        data: {
+          password: hashedPassword,
+          debe_cambiar_password: false,
+        },
+        include: { rol: true },
+      });
+    } catch {
+      usuarioActualizado = await ModeloUsuario.update({
+        where: { [campoId]: idValor },
+        data: {
+          password: hashedPassword,
+          debeCambiarPassword: false,
+        },
+        include: { rol: true },
+      });
+    }
+
+    // 3. Registrar auditoría en bitácora si está disponible
+    if (ModeloBitacora) {
+      try {
+        await ModeloBitacora.create({
+          data: {
+            usuario_id: Number(idValor),
+            usuario_nombre: username,
+            rol: rolNombre || 'Usuario',
+            accion: 'CAMBIO_PASSWORD_OBLIGATORIO',
+            modulo: 'SEGURIDAD',
+            detalles: 'El usuario actualizó su contraseña provisional al iniciar sesión.',
+          },
+        });
+      } catch (eBit) {
+        console.warn('⚠️ No se registró auditoría en bitácora:', eBit.message);
+      }
+    }
+
+    return {
+      success: true,
+      user: {
+        id: idValor,
+        username: usuarioActualizado.username,
+        rol: usuarioActualizado.rol?.nombre || rolNombre,
+        debeCambiarPassword: false,
+      },
+    };
+  } catch (error) {
+    console.error('❌ Error exacto al cambiar clave:', error);
+    return { 
+      success: false, 
+      error: `Error de BD: ${error.message || 'Verifique los campos del modelo Prisma.'}` 
+    };
   }
 }

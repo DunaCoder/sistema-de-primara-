@@ -1,86 +1,130 @@
-// app/actions/coordinador.js
-'use server'
+'use server';
 
-import { Pool } from "pg";
-import { PrismaPg } from "@prisma/adapter-pg";
-import pkg from "@prisma/client";
+import { prisma } from '@/app/lib/prisma';
 
-const { PrismaClient } = pkg;
+// Lista de respaldo para asegurar que las materias de primaria siempre estén disponibles
+const MATERIAS_PREDETERMINADAS = [
+  { nombre: 'Lengua y Literatura' },
+  { nombre: 'Matemática' },
+  { nombre: 'Ciencias Naturales' },
+  { nombre: 'Ciencias Sociales' },
+  { nombre: 'Educación Física y Deportes' },
+  { nombre: 'Educación Musical' },
+  { nombre: 'Computación e Informática' },
+  { nombre: 'Inglés' },
+];
 
-const connectionString = `${process.env.DATABASE_URL}`;
-const pool = new Pool({ connectionString });
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
-
-// 1. Cargar datos necesarios para los combos/selects
 export async function getDatosAsignacion() {
   try {
-    const docentes = await prisma.personal.findMany({
-      select: {
-        idPersonal: true,
-        nombre: true,
-        apellido: true,
+    // 1. Obtener personal/docentes
+    let personalDocentes = await prisma.personal.findMany({
+      where: {
+        usuario: {
+          rol: {
+            nombre: {
+              contains: 'docente',
+              mode: 'insensitive',
+            },
+          },
+        },
       },
     });
 
-    const grados = await prisma.gradoSeccion.findMany({
-      select: {
-        idGradoSeccion: true,
-        grado: true,
-        seccion: true,
-      },
+    if (personalDocentes.length === 0) {
+      personalDocentes = await prisma.personal.findMany();
+    }
+
+    const docentes = personalDocentes.map((p) => ({
+      idPersonal: p.idPersonal,
+      nombre: p.nombre,
+      apellido: p.apellido,
+      cedula: p.idPersonal,
+    }));
+
+    // 2. Traer materias de la BD. Si está vacía, la poblamos automáticamente.
+    let materiasBD = await prisma.materia.findMany({
+      orderBy: { idMateria: 'asc' },
     });
 
-    const materias = await prisma.materia.findMany({
-      select: {
-        idMateria: true,
-        nombre: true,
+    if (materiasBD.length === 0) {
+      await prisma.materia.createMany({
+        data: MATERIAS_PREDETERMINADAS,
+      });
+      materiasBD = await prisma.materia.findMany({
+        orderBy: { idMateria: 'asc' },
+      });
+    }
+
+    // 3. Traer asignaciones con sus relaciones (Nombres reales de docente, materia y sección)
+    const asignacionesBD = await prisma.asignacionDocente.findMany({
+      include: {
+        docente: true,
+        gradoSeccion: true,
+        materia: true,
       },
+      orderBy: { idAsignacion: 'desc' },
     });
 
     return {
       success: true,
       docentes,
-      grados,
-      materias,
+      materias: materiasBD,
+      asignaciones: asignacionesBD,
     };
   } catch (error) {
-    console.error("❌ Error en getDatosAsignacion:", error);
-    return { success: false, error: "Error al cargar listas de asignación." };
+    console.error('❌ Error en getDatosAsignacion:', error);
+    return { success: false, error: 'Error al consultar datos iniciales.' };
   }
 }
 
-// 2. Procesar y guardar la nueva asignación
 export async function guardarAsignacionDocente(data) {
   try {
-    const { idDocente, idGradoSeccion, idMateria } = data;
+    const { idDocente, grado, seccion, idMateria } = data;
 
-    const existe = await prisma.asignacionDocente.findFirst({
+    const gradoNum = String(grado).trim();
+    const seccionTxt = String(seccion).trim().toUpperCase();
+
+    // Buscar o crear la combinación de Grado y Sección
+    let gradoSeccion = await prisma.gradoSeccion.findFirst({
       where: {
-        idDocente: idDocente,
-        idGradoSeccion: Number(idGradoSeccion),
-        idMateria: Number(idMateria),
+        AND: [
+          {
+            OR: [
+              { grado: { contains: gradoNum, mode: 'insensitive' } },
+              { grado: { equals: `${gradoNum}° Grado` } },
+            ],
+          },
+          { seccion: { equals: seccionTxt, mode: 'insensitive' } },
+        ],
       },
     });
 
-    if (existe) {
-      return {
-        success: false,
-        error: "Esta materia ya está asignada a este docente en esta sección.",
-      };
+    if (!gradoSeccion) {
+      gradoSeccion = await prisma.gradoSeccion.create({
+        data: {
+          grado: `${gradoNum}° Grado`,
+          seccion: seccionTxt,
+        },
+      });
     }
 
+    // Crear asignación en la base de datos
     await prisma.asignacionDocente.create({
       data: {
-        idDocente: idDocente,
-        idGradoSeccion: Number(idGradoSeccion),
+        idDocente: String(idDocente),
+        idGradoSeccion: Number(gradoSeccion.idGradoSeccion),
         idMateria: Number(idMateria),
       },
     });
 
     return { success: true };
   } catch (error) {
-    console.error("❌ Error en guardarAsignacionDocente:", error);
-    return { success: false, error: "No se pudo guardar la asignación." };
+    console.error('❌ Error exacto en guardarAsignacionDocente:', error);
+    return { 
+      success: false, 
+      error: error.code === 'P2002' 
+        ? 'Este docente ya tiene asignada esa materia en este grado y sección.' 
+        : 'No se pudo guardar la asignación en la base de datos.' 
+    };
   }
 }

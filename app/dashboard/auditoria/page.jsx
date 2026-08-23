@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { obtenerAuditoria } from '@/app/actions/auditoria';
+import { obtenerAuditoria } from '@/actions/auditoria';
 
 export default function AuditoriaPage() {
   const [logs, setLogs] = useState([]);
@@ -12,9 +12,8 @@ export default function AuditoriaPage() {
     async function cargar() {
       try {
         const res = await obtenerAuditoria();
-        // Acepta tanto res.logs como res.data para mayor compatibilidad
         if (res?.success) {
-          setLogs(res.logs || res.data || []);
+          setLogs(res.logs || []);
         }
       } catch (error) {
         console.error("Error al cargar la auditoría:", error);
@@ -25,7 +24,7 @@ export default function AuditoriaPage() {
     cargar();
   }, []);
 
-  // Filtrado en tiempo real
+  // Filtrado dinámico en tiempo real
   const logsFiltrados = logs.filter((log) =>
     log.usuarioNombre?.toLowerCase().includes(filtro.toLowerCase()) ||
     log.modulo?.toLowerCase().includes(filtro.toLowerCase()) ||
@@ -40,7 +39,7 @@ export default function AuditoriaPage() {
         <div>
           <h1 className="text-xl font-bold text-slate-800">🛡️ Bitácora y Auditoría del Sistema</h1>
           <p className="text-xs text-slate-500 mt-1">
-            Registro inmutable de eventos críticos (Solo lectura)
+            Registro inmutable de eventos de seguridad y operaciones del plantel
           </p>
         </div>
         <input
@@ -66,10 +65,9 @@ export default function AuditoriaPage() {
                   <th className="p-3">Fecha y Hora</th>
                   <th className="p-3">Usuario</th>
                   <th className="p-3">Rol</th>
-                  <th className="p-3">IP</th>
                   <th className="p-3">Módulo</th>
                   <th className="p-3">Acción</th>
-                  <th className="p-3">Detalle / Valor Ant. vs Nuevo</th>
+                  <th className="p-3">Detalle del Evento</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -84,21 +82,12 @@ export default function AuditoriaPage() {
                         {log.rol || 'SIN ROL'}
                       </span>
                     </td>
-                    <td className="p-3 font-mono text-[11px] text-slate-500">{log.ip || '127.0.0.1'}</td>
-                    <td className="p-3 font-medium text-slate-800">{log.modulo || 'GENERAL'}</td>
+                    <td className="p-3 font-medium text-slate-800 uppercase">{log.modulo || 'GENERAL'}</td>
                     <td className="p-3">
                       <span className="font-semibold text-slate-700">{log.accion}</span>
                     </td>
-                    <td className="p-3 text-slate-600 max-w-xs truncate">
-                      {log.valorAnterior && log.valorNuevo ? (
-                        <div className="font-mono text-[11px]">
-                          <span className="text-red-600 line-through mr-1">{log.valorAnterior}</span>
-                          <span className="text-slate-400 font-bold">→</span>
-                          <span className="text-emerald-600 font-bold ml-1">{log.valorNuevo}</span>
-                        </div>
-                      ) : (
-                        log.detalles
-                      )}
+                    <td className="p-3 text-slate-600 max-w-md break-words">
+                      {log.detalles}
                     </td>
                   </tr>
                 ))}

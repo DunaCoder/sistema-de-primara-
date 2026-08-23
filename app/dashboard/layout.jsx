@@ -26,221 +26,127 @@ export default function DashboardLayout({ children }) {
 
   if (!user) return null;
 
-<<<<<<< HEAD
-  // Normalización del rol (soporta string directo o un objeto rol)
+  // Normalización estricta del rol (elimina acentos, espacios extra y convierte a mayúsculas)
   const rolBruto = typeof user.rol === 'string' ? user.rol : user.rol?.nombre || '';
   const userRol = rolBruto
     .trim()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "") // Elimina acentos
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
     .toUpperCase();
 
-  // 📌 Menú estricto derivado de la Matriz de Alcance Operativo
-=======
-  // Normalizar el rol ignorando espacios extra o diferencias de mayúsculas
-  const rolBruto = typeof user.rol === 'string' ? user.rol : user.rol?.nombre || '';
-  const userRol = rolBruto.trim();
-
-  // 📌 Mapeo corregido: Secretaría solo actúa como Data Entry
->>>>>>> 6054ec0a436990851085ee50f6fe9cc47a2fac99
+  // Matriz de accesos y navegación
   const menuItems = [
     { 
-      label: 'Inicio Dashboard', 
+      label: 'Inicio', 
       path: '/dashboard', 
       icon: '🏠', 
-<<<<<<< HEAD
-      roles: ['ADMINISTRADOR', 'COORDINADOR', 'DOCENTE', 'SECRETARIA', 'ESTUDIANTE', 'REPRESENTANTE'] 
+      roles: ['ADMINISTRADOR', 'ADMIN', 'COORDINADOR', 'COORDINACION', 'DOCENTE', 'PROFESOR', 'SECRETARIA', 'SECRETARIO'] 
     },
 
-    // --- ADMINISTRADOR ---
+    // --- ADMINISTRADOR (Mantenimiento Técnico y Seguridad) ---
     { 
       label: 'Gestión de Cuentas', 
       path: '/dashboard/usuarios', 
       icon: '👤', 
-      roles: ['ADMINISTRADOR'] 
+      roles: ['ADMINISTRADOR', 'ADMIN'] 
     },
     { 
       label: 'Bitácora de Auditoría', 
       path: '/dashboard/auditoria', 
       icon: '🛡️', 
-      roles: ['ADMINISTRADOR'] 
+      roles: ['ADMINISTRADOR', 'ADMIN'] 
     },
 
-    // --- COORDINADOR ---
-    { 
-      label: 'Estructura Escolar', 
-      path: '/dashboard/estructura', 
-      icon: '🏫', 
-      roles: ['COORDINADOR'] 
-    },
-    { 
-      label: 'Asignar Asignaturas', 
-      path: '/dashboard/asignaciones', 
-      icon: '📚', 
-      roles: ['COORDINADOR'] 
-    },
-    { 
-      label: 'Control Cierre de Lapso', 
-      path: '/dashboard/cierre-lapso', 
-      icon: '🔒', 
-      roles: ['COORDINADOR'] 
-    },
-
-    // --- DOCENTE ---
-    { 
-      label: 'Registro de Estudiantes y Reportes', 
-      path: '/dashboard/reportes', 
-      icon: '📄', 
-      roles: ['DOCENTE'] 
-    },
-    { 
-      label: 'Carga de Calificaciones', 
-      path: '/dashboard/gestion', 
-      icon: '✏️', 
-      roles: ['DOCENTE'] 
-    },
-    { 
-      label: 'Historial de Actividades', 
-      path: '/dashboard/historial', 
-      icon: '📜', 
-      roles: ['DOCENTE'] 
-    },
-
-    // --- SECRETARÍA (RUTAS CORREGIDAS) ---
-    { 
-      label: 'Matrícula General', 
-      path: '/dashboard/inscripciones', 
-      icon: '👨‍🎓', 
-      roles: ['SECRETARIA'] 
-    },
-    { 
-      label: 'Ficha de Inscripción', 
-      path: '/dashboard/estudiante', 
-      icon: '📝', 
-      roles: ['SECRETARIA'] 
-    },
-
-    // --- ESTUDIANTES Y REPRESENTANTES ---
-    { 
-      label: 'Solicitud Constancias', 
-      path: '/dashboard/constancias', 
-      icon: '📑', 
-      roles: ['ESTUDIANTE', 'REPRESENTANTE'] 
-=======
-      roles: ['Administrador', 'ADMINISTRADOR', 'Secretaria', 'SECRETARIA', 'Docente', 'DOCENTE', 'Coordinador', 'COORDINADOR'] 
-    },
-    // --- MÓDULOS DEL ADMINISTRADOR (TÉCNICO / AUDITOR) ---
-    { 
-      label: 'Gestionar Usuarios', 
-      path: '/dashboard/usuarios', 
-      icon: '👤', 
-      roles: ['Administrador', 'ADMINISTRADOR'] 
-    },
-    { 
-      label: 'Auditoría del Sistema', 
-      path: '/dashboard/auditoria', 
-      icon: '🛡️', 
-      roles: ['Administrador', 'ADMINISTRADOR'] 
-    },
-    // --- MÓDULOS DEL COORDINADOR (ESTRUCTURA Y ASIGNACIÓN) ---
+    // --- COORDINADOR (Gestión Académica y Asignaciones) ---
     { 
       label: 'Asignar Materias', 
       path: '/dashboard/asignaciones', 
       icon: '📚', 
-      roles: ['Coordinador', 'COORDINADOR'] 
+      roles: ['COORDINADOR', 'COORDINACION'] 
     },
-    // --- MÓDULOS DE SECRETARÍA (DATA ENTRY / REGISTRO MATRÍCULA) ---
+    { 
+      label: 'Cierre de Lapso', 
+      path: '/dashboard/cerra', 
+      icon: '🔒', 
+      roles: ['COORDINADOR', 'COORDINACION'] 
+    },
+
+    // --- SECRETARÍA (Registro y Matrícula) ---
     { 
       label: 'Inscribir Estudiante', 
       path: '/dashboard/inscripciones', 
       icon: '📝', 
-      roles: ['Secretaria', 'SECRETARIA'] 
+      roles: ['SECRETARIA', 'SECRETARIO'] 
     },
     { 
-      label: 'Ver Matrícula', 
+      label: 'Matrícula Escolar', 
       path: '/dashboard/estudiante', 
-      icon: '👥', 
-      roles: ['Secretaria', 'SECRETARIA'] 
+      icon: '👨‍🎓', 
+      roles: ['SECRETARIA', 'SECRETARIO'] 
     },
-    // --- MÓDULOS DEL DOCENTE (EVALUACIÓN Y CALIFICACIONES) ---
+
+    // --- DOCENTE (Evaluación y Notas) ---
     { 
-      label: 'Gestión de Estudiantes', 
-      path: '/dashboard/estudiantes/nuevo', 
-      icon: '👥', 
-      roles: ['Docente', 'DOCENTE'] 
+      label: 'Mis Secciones', 
+      path: '/dashboard/reportes', 
+      icon: '📄', 
+      roles: ['DOCENTE', 'PROFESOR'] 
     },
     { 
-      label: 'Gestión de Notas', 
+      label: 'Cargar Calificaciones', 
       path: '/dashboard/gestion', 
-      icon: '📝', 
-      roles: ['Docente', 'DOCENTE'] 
->>>>>>> 6054ec0a436990851085ee50f6fe9cc47a2fac99
+      icon: '✏️', 
+      roles: ['DOCENTE', 'PROFESOR'] 
     },
+
+    // --- PERFIL GENERAL ---
+    { 
+      label: 'Mi Perfil', 
+      path: '/dashboard/perfil', 
+      icon: '⚙️', 
+      roles: ['ADMINISTRADOR', 'ADMIN', 'COORDINADOR', 'COORDINACION', 'DOCENTE', 'PROFESOR', 'SECRETARIA', 'SECRETARIO'] 
+    }
   ];
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col md:flex-row">
-<<<<<<< HEAD
       {/* Barra Lateral (Sidebar) */}
       <aside className="w-full md:w-64 bg-slate-900 text-white p-6 flex flex-col justify-between shadow-lg md:sticky md:top-0 md:h-screen">
         <div className="space-y-6">
-          {/* Encabezado del Sistema */}
+          {/* Encabezado Institucional */}
           <div className="border-b border-slate-700 pb-4 text-center md:text-left">
-            <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider">U.E.N.B. Republicano</h2>
+            <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider">U.E.N. Bicentenario</h2>
             <p className="text-xs text-indigo-400 mt-1 font-medium">Gestión Escolar</p>
           </div>
 
-          {/* Tarjeta del Usuario Activo */}
+          {/* Tarjeta de Usuario Activo */}
           <div className="bg-slate-800 p-3 rounded-lg border border-slate-700">
-            <p className="text-xs text-slate-400">Usuario:</p>
+            <p className="text-xs text-slate-400">Usuario activo:</p>
             <p className="text-sm font-bold text-emerald-400 truncate">
-              {user.nombreCompleto || user.username}
+              {user.nombreCompleto || user.nombre || user.username}
             </p>
             <p className="text-xs text-slate-400 mt-1">
               Rol: <span className="text-indigo-300 font-semibold">{userRol}</span>
             </p>
           </div>
 
-          {/* Menú Dinámico según Permisos */}
+          {/* Menú de Navegación Dinámico */}
           <nav className="flex flex-col gap-1.5 pt-2">
             <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold px-2 mb-1">
-              Módulos Asignados
+              Módulos del Sistema
             </span>
             {menuItems.map((item) => {
               if (!item.roles.includes(userRol)) return null;
-              
-=======
-      <aside className="w-full md:w-64 bg-slate-900 text-white p-6 flex flex-col justify-between shadow-lg md:sticky md:top-0 md:h-screen">
-        <div className="space-y-6">
-          <div className="border-b border-slate-700 pb-4 text-center md:text-left">
-            <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider">U.E.N.B.Republicano</h2>
-            <p className="text-xs text-indigo-400 mt-1 font-medium">Gestión Escolar</p>
-          </div>
 
-          <div className="bg-slate-800 p-3 rounded-lg border border-slate-700">
-            <p className="text-xs text-slate-400">Usuario:</p>
-            <p className="text-sm font-bold text-emerald-400 truncate">{user.nombreCompleto || user.username}</p>
-            <p className="text-xs text-slate-400 mt-1">Rol: <span className="text-indigo-300 font-semibold">{userRol}</span></p>
-          </div>
-
-          <nav className="flex flex-col gap-1.5 pt-2">
-            <span className="text-[10px] uppercase tracking-widest text-slate-500 font-bold px-2 mb-1">Módulos</span>
-            {menuItems.map((item) => {
-              if (!item.roles.includes(userRol)) return null;
->>>>>>> 6054ec0a436990851085ee50f6fe9cc47a2fac99
               const isActive = pathname === item.path;
               return (
                 <Link
                   key={item.path}
                   href={item.path}
                   className={`w-full flex items-center gap-3 py-2.5 px-3 text-sm rounded-lg font-medium transition-all ${
-<<<<<<< HEAD
                     isActive 
                       ? 'bg-indigo-600 text-white shadow-md' 
                       : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-=======
-                    isActive ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
->>>>>>> 6054ec0a436990851085ee50f6fe9cc47a2fac99
                   }`}
                 >
                   <span>{item.icon}</span>
@@ -251,23 +157,16 @@ export default function DashboardLayout({ children }) {
           </nav>
         </div>
 
-<<<<<<< HEAD
-        {/* Botón de Cierre de Sesión */}
+        {/* Cierre de Sesión */}
         <button 
           onClick={logout} 
-          className="w-full bg-rose-600 hover:bg-rose-700 text-white font-medium text-sm py-2.5 rounded-lg transition-colors shadow-sm mt-6 cursor-pointer"
+          className="w-full bg-rose-600 hover:bg-rose-700 text-white font-medium text-sm py-2.5 rounded-lg transition-colors shadow-sm mt-6 flex items-center justify-center gap-2 cursor-pointer"
         >
-=======
-        <button onClick={logout} className="w-full bg-rose-600 hover:bg-rose-700 text-white font-medium text-sm py-2.5 rounded-lg transition-colors shadow-sm mt-6">
->>>>>>> 6054ec0a436990851085ee50f6fe9cc47a2fac99
-          Cerrar Sesión 🚪
+          <span>🚪</span> Cerrar Sesión
         </button>
       </aside>
 
-<<<<<<< HEAD
-      {/* Área Principal de Contenido */}
-=======
->>>>>>> 6054ec0a436990851085ee50f6fe9cc47a2fac99
+      {/* Área Principal */}
       <main className="flex-1 p-6 md:p-8 space-y-6 overflow-y-auto">
         {children}
       </main>

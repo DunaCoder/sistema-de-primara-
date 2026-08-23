@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -19,7 +23,9 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": [
+        "./*"
+      ]
     }
   },
   "include": [
@@ -28,11 +34,10 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
-    "**/*.mts"
-<<<<<<< HEAD
-, "app/layout.jsx", "prisma.config.ts.bak"  ],
-=======
-, "app/layout.jsx"  ],
->>>>>>> 6054ec0a436990851085ee50f6fe9cc47a2fac99
-  "exclude": ["node_modules"]
+    "**/*.mts",
+    "app/layout.jsx"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }

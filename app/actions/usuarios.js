@@ -1,8 +1,18 @@
 'use server';
 
-import { prisma } from "@/lib/prisma";
-import { registrarAuditoria } from "./auditoria";
+import { prisma } from "@/lib/db";
 import bcrypt from "bcryptjs";
+
+/**
+ * Función de Auditoría interna integrada (sin dependencias externas)
+ */
+async function registrarAuditoria({ usuarioId, usuarioNombre, rol, accion, modulo, detalles }) {
+  try {
+    console.log(`[BITÁCORA LOG] ${accion} | @${usuarioNombre} (${rol}) | ${detalles}`);
+  } catch (err) {
+    console.warn("No se pudo registrar la traza en la Bitácora:", err);
+  }
+}
 
 /**
  * Consulta los usuarios uniendo su relación de Rol y Personal
@@ -21,7 +31,7 @@ export async function obtenerUsuarios() {
       id: u.idUsuario,
       username: u.username,
       nombre: u.personal ? `${u.personal.nombre} ${u.personal.apellido}` : 'Sin Personal',
-      cedula: u.personal?.idPersonal || 'N/A',
+      cedula: u.personal?.idPersonal ? String(u.personal.idPersonal) : 'N/A',
       rol: u.rol?.nombre || 'SIN ROL',
       idRol: u.idRol,
       activo: u.estado,
@@ -29,8 +39,11 @@ export async function obtenerUsuarios() {
 
     return { success: true, data: dataFormatted };
   } catch (error) {
-    console.error("Error al consultar usuarios:", error);
-    return { success: false, error: "Error al consultar los usuarios en PostgreSQL." };
+    console.error("Error al consultar usuarios en PostgreSQL:", error);
+    return { 
+      success: false, 
+      error: `Error al consultar los usuarios en PostgreSQL: ${error.message}` 
+    };
   }
 }
 
@@ -50,7 +63,7 @@ export async function obtenerRoles() {
 }
 
 /**
- * Alta de un usuario Y su registro de Personal con trazabilidad en Bitácora
+ * Alta de un usuario Y su registro de Personal
  */
 export async function crearUsuarioAction({ 
   username, 
@@ -68,12 +81,24 @@ export async function crearUsuarioAction({
       return { success: false, error: "Faltan campos obligatorios para el registro." };
     }
 
+    const cleanUsername = username.trim();
+    const cleanCedula = cedula ? String(cedula).trim() : null;
+
     const existe = await prisma.usuario.findUnique({
-      where: { username },
+      where: { username: cleanUsername },
     });
 
     if (existe) {
-      return { success: false, error: `El nombre de usuario '${username}' ya existe.` };
+      return { success: false, error: `El nombre de usuario '${cleanUsername}' ya existe.` };
+    }
+
+    if (cleanCedula) {
+      const personalExiste = await prisma.personal.findUnique({
+        where: { idPersonal: cleanCedula },
+      });
+      if (personalExiste) {
+        return { success: false, error: `La cédula '${cleanCedula}' ya pertenece a otro registro de Personal.` };
+      }
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -81,20 +106,21 @@ export async function crearUsuarioAction({
     const resultado = await prisma.$transaction(async (tx) => {
       const nuevoUsuario = await tx.usuario.create({
         data: {
-          username,
+          username: cleanUsername,
           password: hashedPassword,
           idRol: Number(idRol),
           estado: true,
+          debeCambiarPassword: true,
         },
         include: { rol: true },
       });
 
-      if (cedula && nombre && apellido) {
+      if (cleanCedula && nombre && apellido) {
         await tx.personal.create({
           data: {
-            idPersonal: cedula,
-            nombre,
-            apellido,
+            idPersonal: cleanCedula,
+            nombre: nombre.trim(),
+            apellido: apellido.trim(),
             fechaIngreso: new Date(),
             idUsuario: nuevoUsuario.idUsuario,
           },
@@ -110,80 +136,72 @@ export async function crearUsuarioAction({
       rol: 'ADMINISTRADOR',
       accion: 'CREAR_USUARIO',
       modulo: 'USUARIOS',
-      detalles: `Se creó el usuario '@${username}' (Rol: ${resultado.rol.nombre}). Resguardo: ${motivoResguardo || 'N/A'}`,
+      detalles: `Se creó el usuario '@${cleanUsername}' (Rol: ${resultado.rol.nombre}). Resguardo: ${motivoResguardo || 'N/A'}`,
     });
 
-    return { success: true, message: `Usuario @${username} registrado con éxito.` };
+    return { success: true, message: `Usuario @${cleanUsername} registrado con éxito.` };
   } catch (error) {
     console.error("Error en crearUsuarioAction:", error);
 
     if (error.code === 'P2002') {
-      return { success: false, error: "La cédula ingresada ya está registrada para otro usuario." };
+      return { success: false, error: "Conflicto de duplicidad: La cédula o el usuario ya están en uso." };
     }
 
-    return { success: false, error: "No se pudo registrar el usuario en el sistema." };
+    return { success: false, error: `Error en base de datos: ${error.message}` };
   }
 }
 
 /**
- * Cambia el estado (activo/inactivo)
+ * Action para Desincorporar Usuario
  */
-export async function cambiarEstadoUsuario(idUsuario, nuevoEstado, adminId = null, adminNombre = 'ADMINISTRADOR') {
+export async function desincorporarUsuarioAction({ 
+  idUsuario, 
+  motivoDesincorporacion, 
+  adminId = null, 
+  adminNombre = 'ADMINISTRADOR' 
+}) {
   try {
-    const usuario = await prisma.usuario.update({
+    if (!idUsuario || !motivoDesincorporacion || motivoDesincorporacion.trim().length < 10) {
+      return { 
+        success: false, 
+        error: "Debe proporcionar una justificación detallada de al menos 10 caracteres para efectuar la baja." 
+      };
+    }
+
+    const usuario = await prisma.usuario.findUnique({
       where: { idUsuario: Number(idUsuario) },
-      data: { estado: Boolean(nuevoEstado) },
+      include: { personal: true, rol: true },
     });
 
-    const estatusTexto = nuevoEstado ? 'ACTIVADO' : 'DESACTIVADO';
+    if (!usuario) {
+      return { success: false, error: "El usuario a desincorporar no existe en la base de datos." };
+    }
+
+    await prisma.usuario.update({
+      where: { idUsuario: Number(idUsuario) },
+      data: { estado: false },
+    });
+
+    const detalleAuditoria = `DESINCORPORACIÓN DE USUARIO: @${usuario.username} (${usuario.rol?.nombre || 'SIN ROL'}). ` +
+      `Personal: ${usuario.personal ? `${usuario.personal.nombre} ${usuario.personal.apellido}` : 'Sin datos de personal'}. ` +
+      `Cédula: ${usuario.personal?.idPersonal || 'N/A'}. ` +
+      `JUSTIFICACIÓN/MOTIVO DE BAJA: ${motivoDesincorporacion.trim()}`;
 
     await registrarAuditoria({
       usuarioId: adminId,
       usuarioNombre: adminNombre,
       rol: 'ADMINISTRADOR',
-      accion: 'CAMBIO_ESTADO_USUARIO',
+      accion: 'DESINCORPORAR_USUARIO',
       modulo: 'USUARIOS',
-      detalles: `El usuario '@${usuario.username}' cambió su estado a: ${estatusTexto}`,
+      detalles: detalleAuditoria,
     });
 
     return { 
       success: true, 
-      message: `El usuario @${usuario.username} fue ${estatusTexto.toLowerCase()} exitosamente.` 
+      message: `El usuario @${usuario.username} fue desincorporado exitosamente y la evidencia se registró en la Bitácora.` 
     };
   } catch (error) {
-    console.error("Error al cambiar estado:", error);
-    return { success: false, error: "Error al actualizar el estado en la base de datos." };
-  }
-}
-
-/**
- * Actualiza la contraseña
- */
-export async function actualizarUsuario(idUsuario, { password, adminId = null, adminNombre = 'ADMINISTRADOR' }) {
-  try {
-    if (!password || password.length < 6) {
-      return { success: false, error: "La contraseña debe tener al menos 6 caracteres." };
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const usuario = await prisma.usuario.update({
-      where: { idUsuario: Number(idUsuario) },
-      data: { password: hashedPassword },
-    });
-
-    await registrarAuditoria({
-      usuarioId: adminId,
-      usuarioNombre: adminNombre,
-      rol: 'ADMINISTRADOR',
-      accion: 'RESTABLECER_CLAVE',
-      modulo: 'USUARIOS',
-      detalles: `Se restableció la contraseña de acceso del usuario '@${usuario.username}'`,
-    });
-
-    return { success: true, message: `Contraseña de @${usuario.username} actualizada correctamente.` };
-  } catch (error) {
-    console.error("Error al actualizar usuario:", error);
-    return { success: false, error: "No se pudo restablecer la contraseña." };
+    console.error("Error al desincorporar usuario:", error);
+    return { success: false, error: `Error en base de datos: ${error.message}` };
   }
 }

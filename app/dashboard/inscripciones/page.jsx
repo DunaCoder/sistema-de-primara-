@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -688,7 +687,7 @@ export default function InscripcionesPage() {
           </button>
         </div>
       </form>
->>>>>>> 6054ec0a436990851085ee50f6fe9cc47a2fac99
+
     </div>
   );
 }
