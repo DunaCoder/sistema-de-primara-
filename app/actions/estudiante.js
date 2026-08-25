@@ -9,7 +9,6 @@ export async function buscarRepresentanteAction(idRepresentante) {
       return { success: false, message: 'ID de representante requerido' };
     }
 
-    // Consulta/Lógica con base de datos aquí
     return { success: false, message: 'Representante no encontrado' };
   } catch (error) {
     return { success: false, error: error.message };
@@ -25,7 +24,6 @@ export async function registrarInscripcionAction(payload) {
       return { success: false, error: 'Faltan datos obligatorios' };
     }
 
-    // Revalidar la ruta en singular para refrescar los datos automáticamente
     revalidatePath('/dashboard/estudiante');
 
     return { success: true, message: 'Inscripción procesada correctamente' };
@@ -38,10 +36,12 @@ export async function registrarInscripcionAction(payload) {
 // 3. Obtener la matrícula general para la tabla
 export async function obtenerMatriculaGeneral() {
   try {
-    // Consulta/Lógica para obtener la lista general de estudiantes
     return [];
   } catch (error) {
     console.error('Error al obtener matrícula general:', error);
     return [];
   }
 }
+
+// ALIAS: Mantiene compatibilidad con el componente de la interfaz de tu compañero
+export const registrarEstudianteCompleto = registrarInscripcionAction;

@@ -10,19 +10,18 @@ export async function obtenerEstudiantesPorSeccion(idGradoSeccion) {
     const inscritos = await prisma.inscripcion.findMany({
       where: {
         idGradoSeccion: Number(idGradoSeccion),
-        anoEscolar: "2025-2026", // Año escolar activo de la institución
+        anoEscolar: "2025-2026",
       },
       include: {
-        estudiante: true, // Relación directa con la tabla Estudiante
+        estudiante: true,
       },
       orderBy: {
         estudiante: {
-          apellido: 'asc', // Orden alfabético por apellido
+          apellido: 'asc',
         },
       },
     });
 
-    // Mapeo adaptado con la entidad 'estudiante'
     return inscritos.map((i) => ({
       idInscripcion: i.idInscripcion,
       idEstudiante: i.estudiante.idEstudiante,
@@ -43,10 +42,8 @@ export async function obtenerEstudiantesPorSeccion(idGradoSeccion) {
  */
 export async function guardarCalificacionesAction(idGradoSeccion, evaluaciones) {
   try {
-    // Transacción atómica en PostgreSQL mediante el cliente centralizado
     await prisma.$transaction(async (tx) => {
       for (const evalData of evaluaciones) {
-        // Búsqueda de evaluación previa para la inscripción activa
         const evaluacionExistente = await tx.evaluacionCualitativa.findFirst({
           where: {
             idInscripcion: Number(evalData.idInscripcion),
@@ -54,7 +51,6 @@ export async function guardarCalificacionesAction(idGradoSeccion, evaluaciones) 
         });
 
         if (evaluacionExistente) {
-          // Actualización de apreciación / nota cualitativa existente
           await tx.evaluacionCualitativa.update({
             where: { 
               idEvaluacionCualitativa: evaluacionExistente.idEvaluacionCualitativa 
@@ -65,7 +61,6 @@ export async function guardarCalificacionesAction(idGradoSeccion, evaluaciones) 
             },
           });
         } else {
-          // Registro nuevo en caso de primera evaluación
           await tx.evaluacionCualitativa.create({
             data: {
               idInscripcion: Number(evalData.idInscripcion),
@@ -90,3 +85,6 @@ export async function guardarCalificacionesAction(idGradoSeccion, evaluaciones) 
     };
   }
 }
+
+// ALIAS: Mantiene compatibilidad con el componente de la interfaz de tu compañero
+export const obtenerEstudiantesYNotas = obtenerEstudiantesPorSeccion;
