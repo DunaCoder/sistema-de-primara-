@@ -30,6 +30,6 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts",
     "app/layout.jsx"
-  ],
+, "actions/calificaciones.js"  ],
   "exclude": ["node_modules"]
 }
