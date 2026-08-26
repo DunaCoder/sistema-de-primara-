@@ -1,29 +1,29 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from 'react';
-import { registrarEstudianteCompleto } from '@/actions/estudiante';
+import React, { useState, useRef, useEffect } from "react";
+import { registrarEstudianteCompleto } from "@/actions/estudiante";
 
 export default function PaginaInscripciones() {
   const [cargando, setCargando] = useState(false);
   const [mostrarExito, setMostrarExito] = useState(false);
-  const [mensajeError, setMensajeError] = useState('');
+  const [mensajeError, setMensajeError] = useState("");
 
   const [form, setForm] = useState({
-    nacRepresentante: 'V-',
-    cedulaRepresentante: '',
-    nombresRepresentante: '',
-    apellidosRepresentante: '',
-    operadoraTelefono: '0412',
-    numeroTelefono: '',
-    correo: '',
-    direccion: '',
-    docEstudianteTipo: 'C.E.',
-    cedulaEstudiante: '',
-    nombresEstudiante: '',
-    apellidosEstudiante: '',
-    fechaNacimiento: '',
-    gradoEscolar: '1er Grado',
-    seccion: 'Sección A'
+    nacRepresentante: "V-",
+    cedulaRepresentante: "",
+    nombresRepresentante: "",
+    apellidosRepresentante: "",
+    operadoraTelefono: "0412",
+    numeroTelefono: "",
+    correo: "",
+    direccion: "",
+    docEstudianteTipo: "C.E.",
+    cedulaEstudiante: "",
+    nombresEstudiante: "",
+    apellidosEstudiante: "",
+    fechaNacimiento: "",
+    gradoEscolar: "1er Grado",
+    seccion: "Sección A",
   });
 
   const [mostrarAlmanaque, setMostrarAlmanaque] = useState(false);
@@ -31,30 +31,46 @@ export default function PaginaInscripciones() {
   const almanaqueRef = useRef(null);
 
   const mesesNombres = [
-    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    "Enero",
+    "Febrero",
+    "Marzo",
+    "Abril",
+    "Mayo",
+    "Junio",
+    "Julio",
+    "Agosto",
+    "Septiembre",
+    "Octubre",
+    "Noviembre",
+    "Diciembre",
   ];
 
   useEffect(() => {
     const handleClickAfuera = (event) => {
-      if (almanaqueRef.current && !almanaqueRef.current.contains(event.target)) {
+      if (
+        almanaqueRef.current &&
+        !almanaqueRef.current.contains(event.target)
+      ) {
         setMostrarAlmanaque(false);
       }
     };
-    document.addEventListener('mousedown', handleClickAfuera);
-    return () => document.removeEventListener('mousedown', handleClickAfuera);
+    document.addEventListener("mousedown", handleClickAfuera);
+    return () => document.removeEventListener("mousedown", handleClickAfuera);
   }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setForm(prev => ({ ...prev, [name]: value }));
+    setForm((prev) => ({ ...prev, [name]: value }));
   };
 
   const seleccionarDia = (dia) => {
-    const mes = String(fechaBase.getMonth() + 1).padStart(2, '0');
+    const mes = String(fechaBase.getMonth() + 1).padStart(2, "0");
     const anio = fechaBase.getFullYear();
-    const diaFormateado = String(dia).padStart(2, '0');
-    setForm(prev => ({ ...prev, fechaNacimiento: `${anio}-${mes}-${diaFormateado}` }));
+    const diaFormateado = String(dia).padStart(2, "0");
+    setForm((prev) => ({
+      ...prev,
+      fechaNacimiento: `${anio}-${mes}-${diaFormateado}`,
+    }));
     setMostrarAlmanaque(false);
   };
 
@@ -74,34 +90,38 @@ export default function PaginaInscripciones() {
     const primerDiaSemana = new Date(anio, mes, 1).getDay();
     const totalDias = new Date(anio, mes + 1, 0).getDate();
     const inicioAjustado = primerDiaSemana === 0 ? 6 : primerDiaSemana - 1;
-    
+
     const dias = [];
     for (let i = 0; i < inicioAjustado; i++) dias.push(null);
     for (let d = 1; d <= totalDias; d++) dias.push(d);
     return dias;
   };
 
+  // AQUÍ VA EL HANDLESUBMIT ACTUALIZADO
   const handleSubmit = async (e) => {
     e.preventDefault();
     setCargando(true);
-    setMensajeError('');
+    setMensajeError("");
 
-    const telefonoCompleto = form.numeroTelefono ? `${form.operadoraTelefono}-${form.numeroTelefono}` : '';
+    const telefonoCompleto = form.numeroTelefono
+      ? `${form.operadoraTelefono}-${form.numeroTelefono}`
+      : "";
 
     const payload = {
       cedulaEstudiante: `${form.docEstudianteTipo}${form.cedulaEstudiante}`,
       nombreEstudiante: form.nombresEstudiante.toUpperCase(),
       apellidoEstudiante: form.apellidosEstudiante.toUpperCase(),
-      fechaNacimiento: form.fechaNacimiento || new Date().toISOString().split('T')[0],
-      
+      fechaNacimiento:
+        form.fechaNacimiento || new Date().toISOString().split("T")[0],
+
       cedulaRepresentante: `${form.nacRepresentante}${form.cedulaRepresentante}`,
       nombreRepresentante: form.nombresRepresentante.toUpperCase(),
       apellidoRepresentante: form.apellidosRepresentante.toUpperCase(),
       telefonoRepresentante: telefonoCompleto,
       emailRepresentante: form.correo,
       direccionRepresentante: form.direccion,
-      
-      idGradoSeccion: 1
+
+      idGradoSeccion: form.gradoEscolar === "1er Grado" ? 1 : 2,
     };
 
     const res = await registrarEstudianteCompleto(payload);
@@ -111,25 +131,25 @@ export default function PaginaInscripciones() {
     if (res.success) {
       setMostrarExito(true);
       setForm({
-        nacRepresentante: 'V-',
-        cedulaRepresentante: '',
-        nombresRepresentante: '',
-        apellidosRepresentante: '',
-        operadoraTelefono: '0412',
-        numeroTelefono: '',
-        correo: '',
-        direccion: '',
-        docEstudianteTipo: 'C.E.',
-        cedulaEstudiante: '',
-        nombresEstudiante: '',
-        apellidosEstudiante: '',
-        fechaNacimiento: '',
-        gradoEscolar: '1er Grado',
-        seccion: 'Sección A'
+        nacRepresentante: "V-",
+        cedulaRepresentante: "",
+        nombresRepresentante: "",
+        apellidosRepresentante: "",
+        operadoraTelefono: "0412",
+        numeroTelefono: "",
+        correo: "",
+        direccion: "",
+        docEstudianteTipo: "C.E.",
+        cedulaEstudiante: "",
+        nombresEstudiante: "",
+        apellidosEstudiante: "",
+        fechaNacimiento: "",
+        gradoEscolar: "1er Grado",
+        seccion: "Sección A",
       });
       setTimeout(() => setMostrarExito(false), 3500);
     } else {
-      setMensajeError(res.mensaje || 'Error al guardar en la base de datos');
+      setMensajeError(res.mensaje || "Error al guardar en la base de datos");
     }
   };
 
@@ -141,11 +161,23 @@ export default function PaginaInscripciones() {
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-6 shadow-2xl flex flex-col items-center justify-center max-w-sm w-full text-center space-y-3 animate-in fade-in zoom-in duration-300">
             <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600 animate-bounce">
-              <svg className="w-12 h-12" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              <svg
+                className="w-12 h-12"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="3"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M5 13l4 4L19 7"
+                />
               </svg>
             </div>
-            <h3 className="text-xl font-bold text-slate-800">¡Inscripción Exitosa!</h3>
+            <h3 className="text-xl font-bold text-slate-800">
+              ¡Inscripción Exitosa!
+            </h3>
             <p className="text-xs text-slate-500 font-medium">
               El estudiante se guardó con éxito en la Base de Datos.
             </p>
@@ -160,7 +192,9 @@ export default function PaginaInscripciones() {
       )}
 
       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-        <h1 className="text-2xl font-bold text-slate-800">Ficha de Inscripción Escolar</h1>
+        <h1 className="text-2xl font-bold text-slate-800">
+          Ficha de Inscripción Escolar
+        </h1>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -173,27 +207,67 @@ export default function PaginaInscripciones() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="flex flex-col justify-end">
-              <label className="text-xs font-semibold text-gray-700 mb-1">Nacionalidad y Cédula *</label>
+              <label className="text-xs font-semibold text-gray-700 mb-1">
+                Nacionalidad y Cédula *
+              </label>
               <div className="flex gap-2">
-                <select name="nacRepresentante" value={form.nacRepresentante} onChange={handleChange} className="p-2 border border-gray-300 rounded-lg text-sm text-slate-900 bg-white outline-none">
+                <select
+                  name="nacRepresentante"
+                  value={form.nacRepresentante}
+                  onChange={handleChange}
+                  className="p-2 border border-gray-300 rounded-lg text-sm text-slate-900 bg-white outline-none"
+                >
                   <option value="V-">V-</option>
                   <option value="E-">E-</option>
                 </select>
-                <input type="text" name="cedulaRepresentante" value={form.cedulaRepresentante} onChange={handleChange} placeholder="Ej: 12345678" className="w-full p-2 border border-gray-300 rounded-lg text-sm text-slate-900 outline-none" required />
+                <input
+                  type="text"
+                  name="cedulaRepresentante"
+                  value={form.cedulaRepresentante}
+                  onChange={handleChange}
+                  placeholder="Ej: 12345678"
+                  className="w-full p-2 border border-gray-300 rounded-lg text-sm text-slate-900 outline-none"
+                  required
+                />
               </div>
             </div>
             <div className="flex flex-col justify-end">
-              <label className="text-xs font-semibold text-gray-700 mb-1">Nombres *</label>
-              <input type="text" name="nombresRepresentante" value={form.nombresRepresentante} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded-lg text-sm text-slate-900 outline-none" required />
+              <label className="text-xs font-semibold text-gray-700 mb-1">
+                Nombres *
+              </label>
+              <input
+                type="text"
+                name="nombresRepresentante"
+                value={form.nombresRepresentante}
+                onChange={handleChange}
+                className="w-full p-2 border border-gray-300 rounded-lg text-sm text-slate-900 outline-none"
+                required
+              />
             </div>
             <div className="flex flex-col justify-end">
-              <label className="text-xs font-semibold text-gray-700 mb-1">Apellidos *</label>
-              <input type="text" name="apellidosRepresentante" value={form.apellidosRepresentante} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded-lg text-sm text-slate-900 outline-none" required />
+              <label className="text-xs font-semibold text-gray-700 mb-1">
+                Apellidos *
+              </label>
+              <input
+                type="text"
+                name="apellidosRepresentante"
+                value={form.apellidosRepresentante}
+                onChange={handleChange}
+                className="w-full p-2 border border-gray-300 rounded-lg text-sm text-slate-900 outline-none"
+                required
+              />
             </div>
             <div className="flex flex-col justify-end">
-              <label className="text-xs font-semibold text-gray-700 mb-1">Teléfono de Contacto</label>
+              <label className="text-xs font-semibold text-gray-700 mb-1">
+                Teléfono de Contacto
+              </label>
               <div className="flex gap-2">
-                <select name="operadoraTelefono" value={form.operadoraTelefono} onChange={handleChange} className="p-2 border border-gray-300 rounded-lg text-sm text-slate-900 bg-white outline-none">
+                <select
+                  name="operadoraTelefono"
+                  value={form.operadoraTelefono}
+                  onChange={handleChange}
+                  className="p-2 border border-gray-300 rounded-lg text-sm text-slate-900 bg-white outline-none"
+                >
                   <option value="0412">0412</option>
                   <option value="0414">0414</option>
                   <option value="0424">0424</option>
@@ -201,16 +275,40 @@ export default function PaginaInscripciones() {
                   <option value="0426">0426</option>
                   <option value="0212">0212</option>
                 </select>
-                <input type="text" name="numeroTelefono" value={form.numeroTelefono} onChange={handleChange} placeholder="7654321" className="w-full p-2 border border-gray-300 rounded-lg text-sm text-slate-900 outline-none" />
+                <input
+                  type="text"
+                  name="numeroTelefono"
+                  value={form.numeroTelefono}
+                  onChange={handleChange}
+                  placeholder="7654321"
+                  className="w-full p-2 border border-gray-300 rounded-lg text-sm text-slate-900 outline-none"
+                />
               </div>
             </div>
             <div className="flex flex-col justify-end">
-              <label className="text-xs font-semibold text-gray-700 mb-1">Correo Electrónico</label>
-              <input type="email" name="correo" value={form.correo} onChange={handleChange} placeholder="correo@ejemplo.com" className="w-full p-2 border border-gray-300 rounded-lg text-sm text-slate-900 outline-none" />
+              <label className="text-xs font-semibold text-gray-700 mb-1">
+                Correo Electrónico
+              </label>
+              <input
+                type="email"
+                name="correo"
+                value={form.correo}
+                onChange={handleChange}
+                placeholder="correo@ejemplo.com"
+                className="w-full p-2 border border-gray-300 rounded-lg text-sm text-slate-900 outline-none"
+              />
             </div>
             <div className="flex flex-col justify-end">
-              <label className="text-xs font-semibold text-gray-700 mb-1">Dirección de Habitación</label>
-              <input type="text" name="direccion" value={form.direccion} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded-lg text-sm text-slate-900 outline-none" />
+              <label className="text-xs font-semibold text-gray-700 mb-1">
+                Dirección de Habitación
+              </label>
+              <input
+                type="text"
+                name="direccion"
+                value={form.direccion}
+                onChange={handleChange}
+                className="w-full p-2 border border-gray-300 rounded-lg text-sm text-slate-900 outline-none"
+              />
             </div>
           </div>
         </div>
@@ -224,36 +322,77 @@ export default function PaginaInscripciones() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="flex flex-col justify-end">
-              <label className="text-xs font-semibold text-gray-700 mb-1">Nacionalidad y Documento *</label>
+              <label className="text-xs font-semibold text-gray-700 mb-1">
+                Nacionalidad y Documento *
+              </label>
               <div className="flex gap-2">
-                <select name="docEstudianteTipo" value={form.docEstudianteTipo} onChange={handleChange} className="p-2 border border-gray-300 rounded-lg text-sm text-slate-900 bg-white outline-none">
+                <select
+                  name="docEstudianteTipo"
+                  value={form.docEstudianteTipo}
+                  onChange={handleChange}
+                  className="p-2 border border-gray-300 rounded-lg text-sm text-slate-900 bg-white outline-none"
+                >
                   <option value="C.E.">C.E.</option>
                   <option value="V-">V-</option>
                   <option value="E-">E-</option>
                 </select>
-                <input type="text" name="cedulaEstudiante" value={form.cedulaEstudiante} onChange={handleChange} placeholder="Número de Cédula / C.E." className="w-full p-2 border border-gray-300 rounded-lg text-sm text-slate-900 outline-none" required />
+                <input
+                  type="text"
+                  name="cedulaEstudiante"
+                  value={form.cedulaEstudiante}
+                  onChange={handleChange}
+                  placeholder="Número de Cédula / C.E."
+                  className="w-full p-2 border border-gray-300 rounded-lg text-sm text-slate-900 outline-none"
+                  required
+                />
               </div>
             </div>
             <div className="flex flex-col justify-end">
-              <label className="text-xs font-semibold text-gray-700 mb-1">Nombres del Estudiante *</label>
-              <input type="text" name="nombresEstudiante" value={form.nombresEstudiante} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded-lg text-sm text-slate-900 outline-none" required />
+              <label className="text-xs font-semibold text-gray-700 mb-1">
+                Nombres del Estudiante *
+              </label>
+              <input
+                type="text"
+                name="nombresEstudiante"
+                value={form.nombresEstudiante}
+                onChange={handleChange}
+                className="w-full p-2 border border-gray-300 rounded-lg text-sm text-slate-900 outline-none"
+                required
+              />
             </div>
             <div className="flex flex-col justify-end">
-              <label className="text-xs font-semibold text-gray-700 mb-1">Apellidos del Estudiante *</label>
-              <input type="text" name="apellidosEstudiante" value={form.apellidosEstudiante} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded-lg text-sm text-slate-900 outline-none" required />
+              <label className="text-xs font-semibold text-gray-700 mb-1">
+                Apellidos del Estudiante *
+              </label>
+              <input
+                type="text"
+                name="apellidosEstudiante"
+                value={form.apellidosEstudiante}
+                onChange={handleChange}
+                className="w-full p-2 border border-gray-300 rounded-lg text-sm text-slate-900 outline-none"
+                required
+              />
             </div>
 
-            <div className="flex flex-col justify-end relative" ref={almanaqueRef}>
-              <label className="text-xs font-semibold text-gray-700 mb-1">Fecha de Nacimiento *</label>
-              <div className="relative cursor-pointer" onClick={() => setMostrarAlmanaque(!mostrarAlmanaque)}>
-                <input 
-                  type="text" 
+            <div
+              className="flex flex-col justify-end relative"
+              ref={almanaqueRef}
+            >
+              <label className="text-xs font-semibold text-gray-700 mb-1">
+                Fecha de Nacimiento *
+              </label>
+              <div
+                className="relative cursor-pointer"
+                onClick={() => setMostrarAlmanaque(!mostrarAlmanaque)}
+              >
+                <input
+                  type="text"
                   readOnly
-                  name="fechaNacimiento" 
-                  value={form.fechaNacimiento} 
+                  name="fechaNacimiento"
+                  value={form.fechaNacimiento}
                   placeholder="aaaa-mm-dd"
-                  className="w-full p-2 pr-10 border border-gray-300 rounded-lg text-sm text-slate-900 bg-white outline-none cursor-pointer" 
-                  required 
+                  className="w-full p-2 pr-10 border border-gray-300 rounded-lg text-sm text-slate-900 bg-white outline-none cursor-pointer"
+                  required
                 />
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none">
                   📅
@@ -263,22 +402,26 @@ export default function PaginaInscripciones() {
               {mostrarAlmanaque && (
                 <div className="absolute z-50 bottom-full mb-2 left-0 w-72 bg-white border border-gray-200 shadow-xl rounded-xl p-3">
                   <div className="flex gap-2 mb-3">
-                    <select 
-                      value={fechaBase.getMonth()} 
-                      onChange={cambiarMes} 
+                    <select
+                      value={fechaBase.getMonth()}
+                      onChange={cambiarMes}
                       className="w-1/2 p-1 border border-gray-300 rounded text-xs text-slate-800 bg-white font-medium"
                     >
                       {mesesNombres.map((mes, idx) => (
-                        <option key={mes} value={idx}>{mes}</option>
+                        <option key={mes} value={idx}>
+                          {mes}
+                        </option>
                       ))}
                     </select>
-                    <select 
-                      value={fechaBase.getFullYear()} 
-                      onChange={cambiarAnio} 
+                    <select
+                      value={fechaBase.getFullYear()}
+                      onChange={cambiarAnio}
                       className="w-1/2 p-1 border border-gray-300 rounded text-xs text-slate-800 bg-white font-medium"
                     >
-                      {aniosDisponibles.map(anio => (
-                        <option key={anio} value={anio}>{anio}</option>
+                      {aniosDisponibles.map((anio) => (
+                        <option key={anio} value={anio}>
+                          {anio}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -315,8 +458,15 @@ export default function PaginaInscripciones() {
             </div>
 
             <div className="flex flex-col justify-end">
-              <label className="text-xs font-semibold text-gray-700 mb-1">Grado Escolar</label>
-              <select name="gradoEscolar" value={form.gradoEscolar} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded-lg text-sm text-slate-900 bg-white outline-none">
+              <label className="text-xs font-semibold text-gray-700 mb-1">
+                Grado Escolar
+              </label>
+              <select
+                name="gradoEscolar"
+                value={form.gradoEscolar}
+                onChange={handleChange}
+                className="w-full p-2 border border-gray-300 rounded-lg text-sm text-slate-900 bg-white outline-none"
+              >
                 <option value="1er Grado">1er Grado</option>
                 <option value="2do Grado">2do Grado</option>
                 <option value="3er Grado">3er Grado</option>
@@ -326,8 +476,15 @@ export default function PaginaInscripciones() {
               </select>
             </div>
             <div className="flex flex-col justify-end">
-              <label className="text-xs font-semibold text-gray-700 mb-1">Sección</label>
-              <select name="seccion" value={form.seccion} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded-lg text-sm text-slate-900 bg-white outline-none">
+              <label className="text-xs font-semibold text-gray-700 mb-1">
+                Sección
+              </label>
+              <select
+                name="seccion"
+                value={form.seccion}
+                onChange={handleChange}
+                className="w-full p-2 border border-gray-300 rounded-lg text-sm text-slate-900 bg-white outline-none"
+              >
                 <option value="Sección A">Sección A</option>
                 <option value="Sección B">Sección B</option>
                 <option value="Sección C">Sección C</option>
@@ -336,8 +493,14 @@ export default function PaginaInscripciones() {
           </div>
         </div>
 
-        <button type="submit" disabled={cargando} className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-base rounded-xl transition-colors shadow-md disabled:opacity-50">
-          {cargando ? 'Guardando Registro en BD...' : 'Completar y Registrar Inscripción'}
+        <button
+          type="submit"
+          disabled={cargando}
+          className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-base rounded-xl transition-colors shadow-md disabled:opacity-50"
+        >
+          {cargando
+            ? "Guardando Registro en BD..."
+            : "Completar y Registrar Inscripción"}
         </button>
       </form>
     </div>

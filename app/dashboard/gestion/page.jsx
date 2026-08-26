@@ -1,34 +1,34 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect } from 'react';
-import { 
-  BookOpen, 
-  Save, 
-  CheckCircle2, 
-  AlertCircle, 
+import React, { useState, useEffect } from "react";
+import {
+  BookOpen,
+  Save,
+  CheckCircle2,
+  AlertCircle,
   Calendar,
   UserCheck,
-  FileSpreadsheet
-} from 'lucide-react';
-import { 
-  obtenerAsignacionesDocente, 
-  obtenerEstudiantesYNotas, 
-  guardarCalificacionesSeccion 
-} from '@/actions/gestionNotas';
+  FileSpreadsheet,
+} from "lucide-react";
+import {
+  obtenerAsignacionesDocente,
+  obtenerEstudiantesYNotas,
+  guardarCalificacionesSeccion,
+} from "@/actions/gestionNotas";
 
 export default function GestionDocentePage() {
   const [secciones, setSecciones] = useState([]);
   const [materias, setMaterias] = useState([]);
-  const [anoEscolar, setAnoEscolar] = useState('');
+  const [anoEscolar, setAnoEscolar] = useState("");
 
-  const [gradoSeccion, setGradoSeccion] = useState('');
-  const [materia, setMateria] = useState('');
-  const [lapso, setLapso] = useState('1');
+  const [gradoSeccion, setGradoSeccion] = useState("");
+  const [materia, setMateria] = useState("");
+  const [lapso, setLapso] = useState("1");
 
   const [estudiantes, setEstudiantes] = useState([]);
   const [cargando, setCargando] = useState(false);
   const [guardando, setGuardando] = useState(false);
-  const [mensaje, setMensaje] = useState({ tipo: '', texto: '' });
+  const [mensaje, setMensaje] = useState({ tipo: "", texto: "" });
 
   useEffect(() => {
     async function cargarInicial() {
@@ -48,15 +48,18 @@ export default function GestionDocentePage() {
   useEffect(() => {
     async function cargarNomina() {
       if (!gradoSeccion || !materia) return;
-      
+
       setCargando(true);
-      setMensaje({ tipo: '', texto: '' });
+      setMensaje({ tipo: "", texto: "" });
 
       const res = await obtenerEstudiantesYNotas(gradoSeccion, materia, lapso);
       if (res.success) {
         setEstudiantes(res.data);
       } else {
-        setMensaje({ tipo: 'error', texto: res.mensaje || 'Error al cargar los estudiantes.' });
+        setMensaje({
+          tipo: "error",
+          texto: res.mensaje || "Error al cargar los estudiantes.",
+        });
       }
       setCargando(false);
     }
@@ -67,21 +70,22 @@ export default function GestionDocentePage() {
   const handleNotaChange = (idInscripcion, campo, valor) => {
     setEstudiantes((prev) =>
       prev.map((est) =>
-        est.idInscripcion === idInscripcion
-          ? { ...est, [campo]: valor }
-          : est
-      )
+        est.idInscripcion === idInscripcion ? { ...est, [campo]: valor } : est,
+      ),
     );
   };
 
   const handleGuardar = async () => {
     if (!materia) {
-      setMensaje({ tipo: 'error', texto: 'Seleccione una materia específica para cargar notas.' });
+      setMensaje({
+        tipo: "error",
+        texto: "Seleccione una materia específica para cargar notas.",
+      });
       return;
     }
 
     setGuardando(true);
-    setMensaje({ tipo: '', texto: '' });
+    setMensaje({ tipo: "", texto: "" });
 
     const datosGuardar = {
       idGradoSeccion: gradoSeccion,
@@ -97,15 +101,23 @@ export default function GestionDocentePage() {
     const res = await guardarCalificacionesSeccion(datosGuardar);
 
     if (res.success) {
-      setMensaje({ tipo: 'exito', texto: '¡Calificaciones guardadas exitosamente!' });
+      setMensaje({
+        tipo: "exito",
+        texto: "¡Calificaciones guardadas exitosamente!",
+      });
     } else {
-      setMensaje({ tipo: 'error', texto: res.error || 'Error al guardar las calificaciones.' });
+      setMensaje({
+        tipo: "error",
+        texto: res.error || "Error al guardar las calificaciones.",
+      });
     }
 
     setGuardando(false);
   };
 
-  const notasCargadasCount = estudiantes.filter((a) => Boolean(a.literal)).length;
+  const notasCargadasCount = estudiantes.filter((a) =>
+    Boolean(a.literal),
+  ).length;
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
@@ -117,16 +129,23 @@ export default function GestionDocentePage() {
             Gestión de Calificaciones
           </h1>
           <p className="text-sm text-slate-500 mt-1">
-            Carga y consulta de notas cualitativas para el período escolar activo.
+            Carga y consulta de notas cualitativas para el período escolar
+            activo.
           </p>
         </div>
         <div className="flex items-center gap-3">
           <div className="bg-slate-50 text-slate-700 px-3 py-2 rounded-lg font-medium text-xs border border-slate-200">
-            Avance: <strong className="text-indigo-600">{notasCargadasCount} / {estudiantes.length}</strong> Evaluados
+            Avance:{" "}
+            <strong className="text-indigo-600">
+              {notasCargadasCount} / {estudiantes.length}
+            </strong>{" "}
+            Evaluados
           </div>
           <div className="flex items-center gap-2 bg-blue-50 text-blue-700 px-4 py-2 rounded-lg font-medium text-sm border border-blue-100">
             <Calendar className="h-4 w-4" />
-            <span>Año Escolar: <strong>{anoEscolar || 'Cargando...'}</strong></span>
+            <span>
+              Año Escolar: <strong>{anoEscolar || "Cargando..."}</strong>
+            </span>
           </div>
         </div>
       </div>
@@ -135,12 +154,12 @@ export default function GestionDocentePage() {
       {mensaje.texto && (
         <div
           className={`p-4 rounded-xl flex items-center gap-3 border ${
-            mensaje.tipo === 'exito'
-              ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-              : 'bg-rose-50 border-rose-200 text-rose-800'
+            mensaje.tipo === "exito"
+              ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+              : "bg-rose-50 border-rose-200 text-rose-800"
           }`}
         >
-          {mensaje.tipo === 'exito' ? (
+          {mensaje.tipo === "exito" ? (
             <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
           ) : (
             <AlertCircle className="h-5 w-5 text-rose-600 shrink-0" />
@@ -216,7 +235,7 @@ export default function GestionDocentePage() {
             className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg transition-colors shadow-sm disabled:opacity-50"
           >
             <Save className="h-4 w-4" />
-            {guardando ? 'Guardando...' : 'Guardar Calificaciones'}
+            {guardando ? "Guardando..." : "Guardar Calificaciones"}
           </button>
         </div>
 
@@ -228,24 +247,40 @@ export default function GestionDocentePage() {
         ) : estudiantes.length === 0 ? (
           <div className="p-12 text-center text-slate-400">
             <FileSpreadsheet className="h-12 w-12 mx-auto mb-3 opacity-40" />
-            <p className="font-medium text-slate-600">No hay estudiantes inscritos en esta sección.</p>
-            <p className="text-xs text-slate-400 mt-1">Verifica la inscripción realizada en el módulo de Control Estudiantil.</p>
+            <p className="font-medium text-slate-600">
+              No hay estudiantes inscritos en esta sección.
+            </p>
+            <p className="text-xs text-slate-400 mt-1">
+              Verifica la inscripción realizada en el módulo de Control
+              Estudiantil.
+            </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-100 text-slate-600 text-xs uppercase tracking-wider border-b border-slate-200">
-                  <th className="py-3 px-4 font-semibold w-16 text-center">N°</th>
+                  <th className="py-3 px-4 font-semibold w-16 text-center">
+                    N°
+                  </th>
                   <th className="py-3 px-4 font-semibold w-32">Cédula</th>
-                  <th className="py-3 px-4 font-semibold">Nombres y Apellidos</th>
-                  <th className="py-3 px-4 font-semibold w-40 text-center">Literal</th>
-                  <th className="py-3 px-4 font-semibold">Apreciación / Observaciones</th>
+                  <th className="py-3 px-4 font-semibold">
+                    Nombres y Apellidos
+                  </th>
+                  <th className="py-3 px-4 font-semibold w-40 text-center">
+                    Literal
+                  </th>
+                  <th className="py-3 px-4 font-semibold">
+                    Apreciación / Observaciones
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-sm text-slate-700">
                 {estudiantes.map((est, index) => (
-                  <tr key={est.idInscripcion || index} className="hover:bg-slate-50 transition-colors">
+                  <tr
+                    key={est.idInscripcion || index}
+                    className="hover:bg-slate-50 transition-colors"
+                  >
                     <td className="py-3 px-4 text-center font-medium text-slate-400">
                       {index + 1}
                     </td>
@@ -257,9 +292,13 @@ export default function GestionDocentePage() {
                     </td>
                     <td className="py-3 px-4 text-center">
                       <select
-                        value={est.literal || ''}
+                        value={est.literal || ""}
                         onChange={(e) =>
-                          handleNotaChange(est.idInscripcion, 'literal', e.target.value)
+                          handleNotaChange(
+                            est.idInscripcion,
+                            "literal",
+                            e.target.value,
+                          )
                         }
                         className="bg-white border border-slate-300 font-bold text-center text-blue-700 rounded-lg p-1.5 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                       >
@@ -275,9 +314,13 @@ export default function GestionDocentePage() {
                       <input
                         type="text"
                         placeholder="Observación sobre el rendimiento..."
-                        value={est.apreciacion || ''}
+                        value={est.apreciacion || ""}
                         onChange={(e) =>
-                          handleNotaChange(est.idInscripcion, 'apreciacion', e.target.value)
+                          handleNotaChange(
+                            est.idInscripcion,
+                            "apreciacion",
+                            e.target.value,
+                          )
                         }
                         className="w-full bg-white border border-slate-200 rounded-lg p-1.5 text-xs text-slate-700 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                       />

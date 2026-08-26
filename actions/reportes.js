@@ -1,6 +1,6 @@
-'use server';
+"use server";
 
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 
 export async function obtenerBoletaPorInscripcion(idInscripcion, lapso) {
   try {
@@ -12,48 +12,52 @@ export async function obtenerBoletaPorInscripcion(idInscripcion, lapso) {
       where: { idInscripcion: Number(idInscripcion) },
       include: {
         estudiante: {
-          include: { representante: true }
+          include: { representante: true },
         },
         gradoSeccion: {
           include: {
             grado: true,
             seccion: true,
             docenteSeccion: {
-              include: { docente: true }
-            }
-          }
+              include: { docente: true },
+            },
+          },
         },
         evaluaciones: {
           where: { lapso: Number(lapso) },
-          include: { materia: true }
-        }
-      }
+          include: { materia: true },
+        },
+      },
     });
 
     if (!inscripcion) {
-      return { success: false, mensaje: "No se encontró el registro de inscripción." };
+      return {
+        success: false,
+        mensaje: "No se encontró el registro de inscripción.",
+      };
     }
 
     // Formatear objeto listo para la boleta
     const est = inscripcion.estudiante;
     const rep = est?.representante;
     const gs = inscripcion.gradoSeccion;
-    const docenteNombre = gs?.docenteSeccion?.[0]?.docente 
+    const docenteNombre = gs?.docenteSeccion?.[0]?.docente
       ? `${gs.docenteSeccion[0].docente.apellido}, ${gs.docenteSeccion[0].docente.nombre}`
       : "Por Asignar";
 
     const boletaFormateada = {
-      estudiante: `${est?.apellido || ''}, ${est?.nombre || ''}`,
-      cedula: est?.cedulaEstudiantil || est?.cedula || 'S/C',
-      grado: `${gs?.grado?.nombre || ''} - Sección ${gs?.seccion?.nombre || ''}`,
-      representante: rep ? `${rep.apellido}, ${rep.nombre}` : 'Sin Asignar',
+      estudiante: `${est?.apellido || ""}, ${est?.nombre || ""}`,
+      cedula: est?.cedulaEstudiantil || est?.cedula || "S/C",
+      grado: `${gs?.grado?.nombre || ""} - Sección ${gs?.seccion?.nombre || ""}`,
+      representante: rep ? `${rep.apellido}, ${rep.nombre}` : "Sin Asignar",
       lapso: `${lapso}° Lapso`,
       docente: docenteNombre,
       evaluaciones: inscripcion.evaluaciones.map((e) => ({
-        materia: e.materia?.nombre || 'Asignatura',
+        materia: e.materia?.nombre || "Asignatura",
         nota: e.literalCalificacion,
-        observacion: e.apreciacionDescriptiva || 'Sin observaciones registradas.'
-      }))
+        observacion:
+          e.apreciacionDescriptiva || "Sin observaciones registradas.",
+      })),
     };
 
     return { success: true, data: boletaFormateada };

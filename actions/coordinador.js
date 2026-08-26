@@ -1,5 +1,5 @@
 // app/actions/coordinador.js
-'use server'
+"use server";
 
 import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";

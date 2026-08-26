@@ -1,7 +1,6 @@
-'use server';
-
-import { prisma } from '@/lib/db';
-import { revalidatePath } from 'next/cache';
+"use server";
+import { prisma } from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
 
 /**
  * 1. Obtener asignaciones e información del Año Escolar
@@ -14,7 +13,7 @@ export async function obtenerAsignacionesDocente() {
         grado: true,
         seccion: true,
       },
-      orderBy: [{ grado: 'asc' }, { seccion: 'asc' }],
+      orderBy: [{ grado: "asc" }, { seccion: "asc" }],
     });
 
     const materias = await prisma.materia.findMany({
@@ -22,7 +21,7 @@ export async function obtenerAsignacionesDocente() {
         idMateria: true,
         nombre: true,
       },
-      orderBy: { nombre: 'asc' },
+      orderBy: { nombre: "asc" },
     });
 
     const fechaActual = new Date();
@@ -36,7 +35,9 @@ export async function obtenerAsignacionesDocente() {
       anoEscolar: anoEscolarCalculado,
       secciones: secciones.map((s) => ({
         id: String(s.idGradoSeccion),
-        nombre: `${String(s.grado).replace(/grados?|°/gi, '').trim()}° Grado - Sección "${s.seccion}"`,
+        nombre: `${String(s.grado)
+          .replace(/grados?|°/gi, "")
+          .trim()}° Grado - Sección "${s.seccion}"`,
       })),
       materias: materias.map((m) => ({
         id: String(m.idMateria),
@@ -44,8 +45,8 @@ export async function obtenerAsignacionesDocente() {
       })),
     };
   } catch (error) {
-    console.error('DETALLE_ERROR_ASIGNACIONES:', error);
-    return { success: false, secciones: [], materias: [], anoEscolar: '' };
+    console.error("DETALLE_ERROR_ASIGNACIONES:", error);
+    return { success: false, secciones: [], materias: [], anoEscolar: "" };
   }
 }
 
@@ -53,10 +54,10 @@ export async function obtenerAsignacionesDocente() {
  * Auxiliar para limpiar prefijos duplicados (V-, C.E., etc.)
  */
 function formatearCedula(valor) {
-  if (!valor || valor === 'S/C') return 'S/C';
+  if (!valor || valor === "S/C") return "S/C";
 
   const esEscolar = /C\.?E\.?/i.test(valor);
-  const numeros = String(valor).replace(/\D/g, '');
+  const numeros = String(valor).replace(/\D/g, "");
 
   if (!numeros) return valor;
 
@@ -66,7 +67,11 @@ function formatearCedula(valor) {
 /**
  * 2. Obtener nómina e inscritos con sus notas
  */
-export async function obtenerEstudiantesYNotas(idGradoSeccion, materiaId, lapso) {
+export async function obtenerEstudiantesYNotas(
+  idGradoSeccion,
+  materiaId,
+  lapso,
+) {
   try {
     if (!idGradoSeccion || !materiaId) return { success: true, data: [] };
 
@@ -74,7 +79,8 @@ export async function obtenerEstudiantesYNotas(idGradoSeccion, materiaId, lapso)
     const numMateria = Number(materiaId);
     const numLapso = Number(lapso);
 
-    if (isNaN(numGradoSeccion) || isNaN(numMateria)) return { success: true, data: [] };
+    if (isNaN(numGradoSeccion) || isNaN(numMateria))
+      return { success: true, data: [] };
 
     const inscripciones = await prisma.inscripcion.findMany({
       where: { idGradoSeccion: numGradoSeccion },
@@ -82,33 +88,37 @@ export async function obtenerEstudiantesYNotas(idGradoSeccion, materiaId, lapso)
         estudiante: true,
         evaluacionesCualitativas: true,
       },
-      orderBy: { idInscripcion: 'desc' },
+      orderBy: { idInscripcion: "desc" },
     });
 
     const data = inscripciones.map((ins) => {
-      const cal = (ins.evaluacionesCualitativas || []).find(
-        (c) => Number(c.lapso) === numLapso && Number(c.idMateria) === numMateria
-      ) || {};
+      const cal =
+        (ins.evaluacionesCualitativas || []).find(
+          (c) =>
+            Number(c.lapso) === numLapso && Number(c.idMateria) === numMateria,
+        ) || {};
 
       const est = ins.estudiante || {};
-      const apellido = est.apellido || '';
-      const nombre = est.nombre || '';
+      const apellido = est.apellido || "";
+      const nombre = est.nombre || "";
 
-      const rawCedula = est.cedulaEscolar || est.idEstudiante || 'S/C';
+      const rawCedula = est.cedulaEscolar || est.idEstudiante || "S/C";
       const cedulaFormateada = formatearCedula(rawCedula);
 
       return {
         idInscripcion: ins.idInscripcion,
         cedula: cedulaFormateada,
-        nombre: [apellido, nombre].filter(Boolean).join(', ') || 'Estudiante sin nombre',
-        literal: cal.literalCalificacion || '',
-        apreciacion: cal.apreciacionDescriptiva || '',
+        nombre:
+          [apellido, nombre].filter(Boolean).join(", ") ||
+          "Estudiante sin nombre",
+        literal: cal.literalCalificacion || "",
+        apreciacion: cal.apreciacionDescriptiva || "",
       };
     });
 
     return { success: true, data };
   } catch (error) {
-    console.error('DETALLE_ERROR_ESTUDIANTES_Y_NOTAS:', error);
+    console.error("DETALLE_ERROR_ESTUDIANTES_Y_NOTAS:", error);
     return { success: false, data: [], mensaje: error.message };
   }
 }
@@ -123,8 +133,13 @@ export async function guardarCalificacionesSeccion(datos) {
     const numMateria = Number(materiaId);
     const numLapso = Number(lapso);
 
-    if (isNaN(numMateria) || isNaN(numLapso) || !calificaciones || !Array.isArray(calificaciones)) {
-      return { success: false, error: 'Datos inválidos para guardar.' };
+    if (
+      isNaN(numMateria) ||
+      isNaN(numLapso) ||
+      !calificaciones ||
+      !Array.isArray(calificaciones)
+    ) {
+      return { success: false, error: "Datos inválidos para guardar." };
     }
 
     for (const cal of calificaciones) {
@@ -143,8 +158,8 @@ export async function guardarCalificacionesSeccion(datos) {
         await prisma.evaluacionCualitativa.update({
           where: { idEvaluacion: existente.idEvaluacion },
           data: {
-            literalCalificacion: cal.literal || '',
-            apreciacionDescriptiva: cal.apreciacion || '',
+            literalCalificacion: cal.literal || "",
+            apreciacionDescriptiva: cal.apreciacion || "",
           },
         });
       } else {
@@ -153,17 +168,17 @@ export async function guardarCalificacionesSeccion(datos) {
             idInscripcion: numInscripcion,
             idMateria: numMateria,
             lapso: numLapso,
-            literalCalificacion: cal.literal || '',
-            apreciacionDescriptiva: cal.apreciacion || '',
+            literalCalificacion: cal.literal || "",
+            apreciacionDescriptiva: cal.apreciacion || "",
           },
         });
       }
     }
 
-    revalidatePath('/dashboard/gestion');
+    revalidatePath("/dashboard/gestion");
     return { success: true };
   } catch (error) {
-    console.error('ERROR_GUARDAR_NOTAS:', error);
+    console.error("ERROR_GUARDAR_NOTAS:", error);
     return { success: false, error: error.message };
   }
 }

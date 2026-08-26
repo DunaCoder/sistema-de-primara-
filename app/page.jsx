@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { loginAction, cambiarPasswordObligatorioAction } from './actions/auth';
-import { useAuth } from './context/AuthContext';
+import { useState } from "react";
+import { loginAction, cambiarPasswordObligatorioAction } from "./actions/auth";
+import { useAuth } from "./context/AuthContext";
 
 export default function LoginPage() {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+
   // Estados de visibilidad para cada campo de contraseña
   const [showPassword, setShowPassword] = useState(false);
   const [showNuevaPassword, setShowNuevaPassword] = useState(false);
@@ -16,21 +16,21 @@ export default function LoginPage() {
   // Estados para el flujo de Cambio de Clave Provisional
   const [requiereCambio, setRequiereCambio] = useState(false);
   const [usuarioTemporal, setUsuarioTemporal] = useState(null);
-  const [nuevaPassword, setNuevaPassword] = useState('');
-  const [confirmarPassword, setConfirmarPassword] = useState('');
+  const [nuevaPassword, setNuevaPassword] = useState("");
+  const [confirmarPassword, setConfirmarPassword] = useState("");
 
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [isPending, setIsPending] = useState(false);
-  
+
   const { login } = useAuth();
 
   const handleSubmitLogin = async (e) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setIsPending(true);
 
     if (!username || !password) {
-      setError('Por favor, rellene todos los campos.');
+      setError("Por favor, rellene todos los campos.");
       setIsPending(false);
       return;
     }
@@ -53,20 +53,20 @@ export default function LoginPage() {
 
   const handleSubmitCambioPassword = async (e) => {
     e.preventDefault();
-    setError('');
+    setError("");
 
     if (!nuevaPassword || !confirmarPassword) {
-      setError('Por favor, complete ambos campos.');
+      setError("Por favor, complete ambos campos.");
       return;
     }
 
     if (nuevaPassword.length < 6) {
-      setError('La nueva contraseña debe tener al menos 6 caracteres.');
+      setError("La nueva contraseña debe tener al menos 6 caracteres.");
       return;
     }
 
     if (nuevaPassword !== confirmarPassword) {
-      setError('Las contraseñas no coinciden.');
+      setError("Las contraseñas no coinciden.");
       return;
     }
 
@@ -76,7 +76,7 @@ export default function LoginPage() {
       usuarioTemporal.id,
       nuevaPassword,
       usuarioTemporal.username,
-      usuarioTemporal.rol
+      usuarioTemporal.rol,
     );
 
     if (res.success) {
@@ -90,14 +90,15 @@ export default function LoginPage() {
   return (
     <main className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
       <div className="bg-white p-8 rounded-xl shadow-md border border-slate-200 w-full max-w-md">
-        
         {/* Encabezado Institucional */}
         <div className="text-center mb-6">
           <span className="text-4xl">🏫</span>
           <h1 className="text-xl font-bold text-slate-800 mt-2">
             Unidad Educativa Nacional Bicentenario Republicano
           </h1>
-          <p className="text-sm text-slate-500">Sistema de Control y Gestión Escolar</p>
+          <p className="text-sm text-slate-500">
+            Sistema de Control y Gestión Escolar
+          </p>
         </div>
 
         {/* Alerta de Error */}
@@ -153,14 +154,15 @@ export default function LoginPage() {
               disabled={isPending}
               className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm py-2.5 rounded-lg transition-colors mt-2"
             >
-              {isPending ? 'Validando Credenciales...' : 'Iniciar Sesión'}
+              {isPending ? "Validando Credenciales..." : "Iniciar Sesión"}
             </button>
           </form>
         ) : (
           /* FORMULARIO 2: CAMBIO OBLIGATORIO DE CLAVE PROVISIONAL */
           <form onSubmit={handleSubmitCambioPassword} className="space-y-4">
             <div className="bg-amber-50 border-l-4 border-amber-500 text-amber-800 p-3 rounded text-xs mb-2">
-              🔒 <strong>Seguridad y Auditoría:</strong> Su contraseña actual es provisional. Debe asignar una clave personal para continuar.
+              🔒 <strong>Seguridad y Auditoría:</strong> Su contraseña actual es
+              provisional. Debe asignar una clave personal para continuar.
             </div>
 
             {/* NUEVA CONTRASEÑA */}
@@ -204,7 +206,9 @@ export default function LoginPage() {
                 />
                 <button
                   type="button"
-                  onClick={() => setShowConfirmarPassword(!showConfirmarPassword)}
+                  onClick={() =>
+                    setShowConfirmarPassword(!showConfirmarPassword)
+                  }
                   className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 focus:outline-none"
                   tabIndex={-1}
                 >
@@ -218,7 +222,9 @@ export default function LoginPage() {
               disabled={isPending}
               className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm py-2.5 rounded-lg transition-colors mt-2"
             >
-              {isPending ? 'Actualizando Contraseña...' : 'Establecer Clave y Continuar'}
+              {isPending
+                ? "Actualizando Contraseña..."
+                : "Establecer Clave y Continuar"}
             </button>
           </form>
         )}
@@ -226,10 +232,11 @@ export default function LoginPage() {
         <div className="text-center mt-6 pt-4 border-t border-slate-100">
           <p className="text-xs text-slate-400">
             Cuentas de prueba del seed: <br />
-            <span className="font-mono text-slate-500">admin | coordinador | docente | secretaria</span>
+            <span className="font-mono text-slate-500">
+              admin | coordinador | docente | secretaria
+            </span>
           </p>
         </div>
-
       </div>
     </main>
   );

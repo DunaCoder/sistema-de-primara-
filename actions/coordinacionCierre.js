@@ -1,11 +1,11 @@
-'use server';
+"use server";
 
-import { prisma } from '@/lib/db';
+import { prisma } from "@/lib/prisma";
 
 /**
  * 1. Obtener estado de avance de carga de notas
  */
-export async function obtenerEstatusCargaDocente(lapso = '1') {
+export async function obtenerEstatusCargaDocente(lapso = "1") {
   try {
     const numLapso = Number(lapso);
 
@@ -22,18 +22,19 @@ export async function obtenerEstatusCargaDocente(lapso = '1') {
           },
         },
       },
-      orderBy: [{ grado: 'asc' }, { seccion: 'asc' }],
+      orderBy: [{ grado: "asc" }, { seccion: "asc" }],
     });
 
     const reporte = secciones.map((sec) => {
       const totalInscritos = sec.inscripciones.length;
       const estudiantesConNotas = sec.inscripciones.filter(
-        (ins) => ins.evaluacionesCualitativas.length > 0
+        (ins) => ins.evaluacionesCualitativas.length > 0,
       ).length;
 
-      const porcentaje = totalInscritos > 0
-        ? Math.round((estudiantesConNotas / totalInscritos) * 100)
-        : 0;
+      const porcentaje =
+        totalInscritos > 0
+          ? Math.round((estudiantesConNotas / totalInscritos) * 100)
+          : 0;
 
       return {
         idGradoSeccion: sec.idGradoSeccion,
@@ -47,7 +48,7 @@ export async function obtenerEstatusCargaDocente(lapso = '1') {
 
     return { success: true, reporte };
   } catch (error) {
-    console.error('ERROR_ESTATUS_CARGA:', error);
+    console.error("ERROR_ESTATUS_CARGA:", error);
     return { success: false, reporte: [] };
   }
 }
@@ -55,7 +56,10 @@ export async function obtenerEstatusCargaDocente(lapso = '1') {
 /**
  * 2. Obtener lote completo de boletines
  */
-export async function obtenerBoletinesMasivosPorSeccion(idGradoSeccion, lapso = '1') {
+export async function obtenerBoletinesMasivosPorSeccion(
+  idGradoSeccion,
+  lapso = "1",
+) {
   try {
     const numSeccion = Number(idGradoSeccion);
     const numLapso = Number(lapso);
@@ -70,7 +74,7 @@ export async function obtenerBoletinesMasivosPorSeccion(idGradoSeccion, lapso = 
           include: { materia: true },
         },
       },
-      orderBy: { estudiante: { apellido: 'asc' } },
+      orderBy: { estudiante: { apellido: "asc" } },
     });
 
     const boletines = inscripciones.map((ins) => {
@@ -80,19 +84,20 @@ export async function obtenerBoletinesMasivosPorSeccion(idGradoSeccion, lapso = 
       return {
         idInscripcion: ins.idInscripcion,
         estudiante: `${est.apellido}, ${est.nombre}`,
-        cedula: est.cedulaEscolar || est.idEstudiante || 'S/C',
+        cedula: est.cedulaEscolar || est.idEstudiante || "S/C",
         grado: `${sec.grado}° Grado - "${sec.seccion}"`,
         evaluaciones: ins.evaluacionesCualitativas.map((e) => ({
           materia: e.materia.nombre,
-          nota: e.literalCalificacion || 'N/A',
-          observacion: e.apreciacionDescriptiva || 'Sin observación registrada.',
+          nota: e.literalCalificacion || "N/A",
+          observacion:
+            e.apreciacionDescriptiva || "Sin observación registrada.",
         })),
       };
     });
 
     return { success: true, boletines };
   } catch (error) {
-    console.error('ERROR_BOLETINES_MASIVOS:', error);
+    console.error("ERROR_BOLETINES_MASIVOS:", error);
     return { success: false, boletines: [], mensaje: error.message };
   }
 }

@@ -1,182 +1,116 @@
-generator client {
-  provider = "prisma-client-js"
+'use server';
+
+import { prisma } from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
+
+/**
+ * 1. Obtener la lista de estudiantes de la sección con sus evaluaciones registradas
+ */
+export async function obtenerEstudiantesPorSeccion(idGradoSeccion, lapso = 1, idMateria) {
+  try {
+    const idGS = Number(idGradoSeccion);
+    if (isNaN(idGS)) return [];
+
+    const inscritos = await prisma.inscripcion.findMany({
+      where: {
+        idGradoSeccion: idGS,
+        anioEscolar: "2025-2026",
+      },
+      include: {
+        estudiante: true,
+        evaluaciones: {
+          where: idMateria ? { lapso: Number(lapso), idMateria: Number(idMateria) } : { lapso: Number(lapso) }
+        }
+      },
+      orderBy: {
+        estudiante: {
+          apellido: 'asc',
+        },
+      },
+    });
+
+    return inscritos.map((i) => {
+      const evalActual = i.evaluaciones[0];
+
+      return {
+        idInscripcion: i.idInscripcion,
+        idEstudiante: i.estudiante.idEstudiante,
+        nombre: i.estudiante.nombre,
+        apellido: i.estudiante.apellido,
+        literal: evalActual?.literalCalificacion || '',
+        apreciacion: evalActual?.apreciacionDescriptiva || '',
+      };
+    });
+
+  } catch (error) {
+    console.error("❌ Error al obtener estudiantes por sección:", error);
+    return [];
+  }
 }
 
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+/**
+ * 2. Guardar o actualizar la transcripción de notas por lote (Atómico)
+ */
+export async function guardarCalificacionesAction({ idGradoSeccion, idMateria, lapso = 1, evaluaciones }) {
+  try {
+    if (!Array.isArray(evaluaciones) || evaluaciones.length === 0) {
+      return { success: false, error: "No hay evaluaciones para guardar." };
+    }
+
+    const idMateriaNum = Number(idMateria);
+    const lapsoNum = Number(lapso);
+
+    if (!idMateriaNum || isNaN(idMateriaNum)) {
+      return { success: false, error: "Se requiere un ID de materia válido." };
+    }
+
+    // Ejecución atómica respetando el @@unique([idInscripcion, lapso, idMateria])
+    await prisma.$transaction(
+      evaluaciones.map((evalData) => {
+        const idInscripcionNum = Number(evalData.idInscripcion);
+        const literalCalificacion = evalData.literal ? String(evalData.literal).trim() : '';
+        const apreciacionDescriptiva = evalData.apreciacion ? String(evalData.apreciacion).trim() : '';
+
+        return prisma.evaluacionCualitativa.upsert({
+          where: {
+            idInscripcion_lapso_idMateria: {
+              idInscripcion: idInscripcionNum,
+              lapso: lapsoNum,
+              idMateria: idMateriaNum,
+            },
+          },
+          update: {
+            literalCalificacion,
+            apreciacionDescriptiva,
+          },
+          create: {
+            idInscripcion: idInscripcionNum,
+            idMateria: idMateriaNum,
+            lapso: lapsoNum,
+            literalCalificacion,
+            apreciacionDescriptiva,
+          },
+        });
+      })
+    );
+
+    revalidatePath('/dashboard/gestion');
+    revalidatePath('/dashboard/notas');
+    revalidatePath('/dashboard/reportes');
+
+    return { 
+      success: true, 
+      message: "Todas las notas transcritas se guardaron correctamente en la base de datos." 
+    };
+
+  } catch (error) {
+    console.error("❌ Error al guardar calificaciones:", error);
+    return { 
+      success: false, 
+      error: "Error de servidor al registrar la transcripción en la base de datos." 
+    };
+  }
 }
 
-// ==========================================
-// 1. ARCHIVOS MAESTROS
-// ==========================================
-
-model Rol {
-  idRol    Int       @id @default(autoincrement()) @map("id_rol")
-  nombre   String    @unique
-  usuarios Usuario[]
-
-  @@map("roles")
-}
-
-model Usuario {
-  idUsuario           Int      @id @default(autoincrement()) @map("id_usuario")
-  username            String   @unique
-  password            String
-  debeCambiarPassword Boolean  @default(true) @map("debe_cambiar_password") // Flag obligatorio para Auditoría
-  estado              Boolean  @default(true)
-
-  // Relaciones
-  idRol    Int       @map("id_rol")
-  rol      Rol       @relation(fields: [idRol], references: [idRol], onDelete: Restrict)
-  personal Personal? // Relación 1:1 opcional con Personal
-
-  @@map("usuarios")
-}
-
-model Personal {
-  idPersonal   String    @id @map("id_personal") // Cédula
-  nombre       String
-  apellido     String
-  fechaIngreso DateTime? @map("fecha_ingreso") @db.Date
-  idUsuario    Int?      @unique @map("id_usuario")
-
-  // Relaciones
-  usuario         Usuario?            @relation(fields: [idUsuario], references: [idUsuario], onDelete: SetNull)
-  gradosSecciones GradoSeccion[]
-  asignaciones    AsignacionDocente[]
-
-  @@map("personal")
-}
-
-model Representante {
-  idRepresentante String       @id @map("id_representante") // Cédula
-  nombre          String
-  apellido        String
-  telefono        String
-  email           String?      @db.VarChar(150)
-  direccion       String       @db.Text
-  estudiantes     Estudiante[]
-
-  @@map("representantes")
-}
-
-model Estudiante {
-  idEstudiante    String   @id @map("id_estudiante") // Cédula escolar o ID
-  nacionalidad    String   @default("V") @db.VarChar(1)
-  cedulaEscolar   String?  @map("cedula_escolar") @db.VarChar(12)
-  nombre          String
-  apellido        String
-  fechaNacimiento DateTime @map("fecha_nacimiento") @db.Date
-
-  // Relaciones
-  idRepresentante String        @map("id_representante")
-  representante   Representante @relation(fields: [idRepresentante], references: [idRepresentante], onDelete: Restrict)
-  inscripciones   Inscripcion[]
-
-  @@map("estudiantes")
-}
-
-model GradoSeccion {
-  idGradoSeccion Int     @id @default(autoincrement()) @map("id_grado_seccion")
-  grado          String  // Ej: "1er Grado"
-  seccion        String  // Ej: "A"
-  idDocenteGuia  String? @map("id_docente_guia")
-
-  // Relaciones
-  docenteGuia  Personal?           @relation(fields: [idDocenteGuia], references: [idPersonal], onDelete: SetNull)
-  inscripciones Inscripcion[]
-  asignaciones AsignacionDocente[]
-
-  @@map("grados_secciones")
-}
-
-// ==========================================
-// 2. TABLAS DE MATERIAS Y ASIGNACIONES
-// ==========================================
-
-model Materia {
-  idMateria   Int     @id @default(autoincrement()) @map("id_materia")
-  nombre      String
-  descripcion String?
-
-  // Relaciones
-  grados       GradoMateria[]
-  asignaciones AsignacionDocente[]
-  evaluaciones EvaluacionCualitativa[]
-
-  @@map("materias")
-}
-
-model GradoMateria {
-  idGradoMateria Int    @id @default(autoincrement()) @map("id_grado_materia")
-  grado          String
-  idMateria      Int    @map("id_materia")
-
-  materia Materia @relation(fields: [idMateria], references: [idMateria], onDelete: Cascade)
-
-  @@unique([grado, idMateria])
-  @@map("grados_materias")
-}
-
-model AsignacionDocente {
-  idAsignacion   Int @id @default(autoincrement()) @map("id_asignacion")
-  idDocente      String @map("id_docente")
-  idGradoSeccion Int @map("id_grado_seccion")
-  idMateria      Int @map("id_materia")
-
-  docente      Personal     @relation(fields: [idDocente], references: [idPersonal], onDelete: Cascade)
-  gradoSeccion GradoSeccion @relation(fields: [idGradoSeccion], references: [idGradoSeccion], onDelete: Cascade)
-  materia      Materia      @relation(fields: [idMateria], references: [idMateria], onDelete: Cascade)
-
-  @@unique([idDocente, idGradoSeccion, idMateria])
-  @@map("asignaciones_docentes")
-}
-
-// ==========================================
-// 3. ARCHIVOS TRANSACCIONALES Y AUDITORÍA
-// ==========================================
-
-model Inscripcion {
-  idInscripcion    Int      @id @default(autoincrement()) @map("id_inscripcion")
-  idEstudiante     String   @map("id_estudiante")
-  idGradoSeccion   Int      @map("id_grado_seccion")
-  anioEscolar      String   @map("anio_escolar")
-  fechaInscripcion DateTime @default(now()) @map("fecha_inscripcion") @db.Date
-
-  estudiante   Estudiante   @relation(fields: [idEstudiante], references: [idEstudiante], onDelete: Cascade)
-  gradoSeccion GradoSeccion @relation(fields: [idGradoSeccion], references: [idGradoSeccion], onDelete: Restrict)
-
-  evaluaciones EvaluacionCualitativa[]
-
-  @@unique([idEstudiante, anioEscolar])
-  @@map("inscripciones")
-}
-
-model EvaluacionCualitativa {
-  idEvaluacion           Int     @id @default(autoincrement()) @map("id_evaluacion")
-  idInscripcion          Int     @map("id_inscripcion")
-  idMateria              Int     @map("id_materia")
-  lapso                  Int
-  literalCalificacion    String  @map("literal_calificacion")
-  apreciacionDescriptiva String? @db.Text @map("apreciacion_descriptiva")
-
-  inscripcion Inscripcion @relation(fields: [idInscripcion], references: [idInscripcion], onDelete: Cascade)
-  materia     Materia     @relation(fields: [idMateria], references: [idMateria], onDelete: Cascade)
-
-  @@unique([idInscripcion, lapso, idMateria])
-  @@map("evaluaciones_cualitativas")
-}
-
-model Bitacora {
-  id            Int      @id @default(autoincrement())
-  usuarioId     Int?     @map("usuario_id")
-  usuarioNombre String   @map("usuario_nombre")
-  rol           String
-  accion        String
-  modulo        String
-  detalles      String   @db.Text
-  fecha         DateTime @default(now())
-
-  @@map("bitacora")
-}
+// ALIAS para compatibilidad con la vista
+export const obtenerEstudiantesYNotas = obtenerEstudiantesPorSeccion;

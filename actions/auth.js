@@ -1,5 +1,5 @@
 // app/actions/auth.js
-'use server'
+"use server";
 
 import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
@@ -14,11 +14,11 @@ const prisma = new PrismaClient({ adapter });
 
 // Mapeo de rutas iniciales por rol
 const RUTAS_INICIALES = {
-  'Coordinador': '/dashboard/asignaciones',
-  'Administrador': '/dashboard',
-  'Admin': '/dashboard',
-  'Docente': '/dashboard/gestion',
-  'Secretaria': '/dashboard/inscripciones',
+  Coordinador: "/dashboard/asignaciones",
+  Administrador: "/dashboard",
+  Admin: "/dashboard",
+  Docente: "/dashboard/gestion",
+  Secretaria: "/dashboard/inscripciones",
 };
 
 export async function loginAction(username, password) {
@@ -50,8 +50,8 @@ export async function loginAction(username, password) {
       where: { idUsuario: usuario.idUsuario },
     });
 
-    const nombreRol = usuario.rol?.nombre || '';
-    const redirectUrl = RUTAS_INICIALES[nombreRol] || '/dashboard';
+    const nombreRol = usuario.rol?.nombre || "";
+    const redirectUrl = RUTAS_INICIALES[nombreRol] || "/dashboard";
 
     // 5. Retornar datos con rol y ruta de redirección automática
     return {

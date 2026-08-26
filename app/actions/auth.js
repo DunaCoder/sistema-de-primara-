@@ -1,7 +1,7 @@
-'use server';
+"use server";
 
-import { prisma } from '@/app/lib/prisma';
-import bcrypt from 'bcryptjs';
+import { prisma } from "@/lib/prisma";
+import bcrypt from "bcryptjs";
 
 // Detectar automáticamente el modelo de Usuario en Prisma
 const getModeloUsuario = () => {
@@ -9,7 +9,9 @@ const getModeloUsuario = () => {
   if (prisma.usuarios) return prisma.usuarios;
   if (prisma.Usuario) return prisma.Usuario;
   if (prisma.Usuarios) return prisma.Usuarios;
-  throw new Error('No se encontró el modelo de Usuario en el cliente de Prisma.');
+  throw new Error(
+    "No se encontró el modelo de Usuario en el cliente de Prisma.",
+  );
 };
 
 // Detectar automáticamente el modelo de Bitácora
@@ -29,7 +31,7 @@ export async function loginAction(username, password) {
       where: {
         username: {
           equals: username.trim(),
-          mode: 'insensitive',
+          mode: "insensitive",
         },
       },
       include: {
@@ -38,32 +40,33 @@ export async function loginAction(username, password) {
     });
 
     if (!usuario) {
-      return { success: false, error: 'El usuario ingresado no existe.' };
+      return { success: false, error: "El usuario ingresado no existe." };
     }
 
     // Comprobar estado si existe la columna
     if (usuario.estado === false) {
-      return { success: false, error: 'El usuario se encuentra inactivo.' };
+      return { success: false, error: "El usuario se encuentra inactivo." };
     }
 
     // 2. Validar contraseña (compatible con bcrypt y texto plano)
-    const userPass = usuario.password || usuario.clave || '';
+    const userPass = usuario.password || usuario.clave || "";
     let esValida = false;
 
-    if (userPass.startsWith('$2a$') || userPass.startsWith('$2b$')) {
+    if (userPass.startsWith("$2a$") || userPass.startsWith("$2b$")) {
       esValida = await bcrypt.compare(password, userPass);
     } else {
       esValida = userPass === password;
     }
 
     if (!esValida) {
-      return { success: false, error: 'Contraseña incorrecta.' };
+      return { success: false, error: "Contraseña incorrecta." };
     }
 
     // Detectar campos de ID y Banderas según la convención del esquema
     const id = usuario.id_usuario ?? usuario.idUsuario ?? usuario.id;
-    const debeCambiar = usuario.debe_cambiar_password ?? usuario.debeCambiarPassword ?? false;
-    const nombreRol = usuario.rol?.nombre || 'Usuario';
+    const debeCambiar =
+      usuario.debe_cambiar_password ?? usuario.debeCambiarPassword ?? false;
+    const nombreRol = usuario.rol?.nombre || "Usuario";
 
     return {
       success: true,
@@ -75,15 +78,20 @@ export async function loginAction(username, password) {
       },
     };
   } catch (error) {
-    console.error('❌ Error en loginAction:', error);
-    return { 
-      success: false, 
-      error: error.message || 'Error al conectar con la base de datos.' 
+    console.error("❌ Error en loginAction:", error);
+    return {
+      success: false,
+      error: error.message || "Error al conectar con la base de datos.",
     };
   }
 }
 
-export async function cambiarPasswordObligatorioAction(idUsuario, nuevaPassword, username, rolNombre) {
+export async function cambiarPasswordObligatorioAction(
+  idUsuario,
+  nuevaPassword,
+  username,
+  rolNombre,
+) {
   try {
     const ModeloUsuario = getModeloUsuario();
     const ModeloBitacora = getModeloBitacora();
@@ -95,19 +103,26 @@ export async function cambiarPasswordObligatorioAction(idUsuario, nuevaPassword,
       where: {
         username: {
           equals: username.trim(),
-          mode: 'insensitive',
+          mode: "insensitive",
         },
       },
     });
 
     if (!usuarioActual) {
-      return { success: false, error: 'No se encontró el registro del usuario en la base de datos.' };
+      return {
+        success: false,
+        error: "No se encontró el registro del usuario en la base de datos.",
+      };
     }
 
     // Identificar la propiedad de ID que existe en el objeto devuelto por Prisma
-    const campoId = usuarioActual.id_usuario !== undefined ? 'id_usuario' : 
-                    usuarioActual.idUsuario !== undefined ? 'idUsuario' : 'id';
-    
+    const campoId =
+      usuarioActual.id_usuario !== undefined
+        ? "id_usuario"
+        : usuarioActual.idUsuario !== undefined
+          ? "idUsuario"
+          : "id";
+
     const idValor = usuarioActual[campoId];
 
     // 2. Intentar actualización dinámicamente según el nombre de la columna de la bandera
@@ -140,14 +155,15 @@ export async function cambiarPasswordObligatorioAction(idUsuario, nuevaPassword,
           data: {
             usuario_id: Number(idValor),
             usuario_nombre: username,
-            rol: rolNombre || 'Usuario',
-            accion: 'CAMBIO_PASSWORD_OBLIGATORIO',
-            modulo: 'SEGURIDAD',
-            detalles: 'El usuario actualizó su contraseña provisional al iniciar sesión.',
+            rol: rolNombre || "Usuario",
+            accion: "CAMBIO_PASSWORD_OBLIGATORIO",
+            modulo: "SEGURIDAD",
+            detalles:
+              "El usuario actualizó su contraseña provisional al iniciar sesión.",
           },
         });
       } catch (eBit) {
-        console.warn('⚠️ No se registró auditoría en bitácora:', eBit.message);
+        console.warn("⚠️ No se registró auditoría en bitácora:", eBit.message);
       }
     }
 
@@ -161,10 +177,10 @@ export async function cambiarPasswordObligatorioAction(idUsuario, nuevaPassword,
       },
     };
   } catch (error) {
-    console.error('❌ Error exacto al cambiar clave:', error);
-    return { 
-      success: false, 
-      error: `Error de BD: ${error.message || 'Verifique los campos del modelo Prisma.'}` 
+    console.error("❌ Error exacto al cambiar clave:", error);
+    return {
+      success: false,
+      error: `Error de BD: ${error.message || "Verifique los campos del modelo Prisma."}`,
     };
   }
 }

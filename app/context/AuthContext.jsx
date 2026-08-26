@@ -1,8 +1,8 @@
 // app/context/AuthContext.jsx
-'use client'
+"use client";
 
-import { createContext, useContext, useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { createContext, useContext, useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 const AuthContext = createContext(null);
 
@@ -13,7 +13,7 @@ export function AuthProvider({ children }) {
 
   // Al cargar, verificar si ya había una sesión guardada en el navegador
   useEffect(() => {
-    const storedUser = localStorage.getItem('sesion_escolar');
+    const storedUser = localStorage.getItem("sesion_escolar");
     if (storedUser) {
       setUser(JSON.parse(storedUser));
     }
@@ -22,16 +22,16 @@ export function AuthProvider({ children }) {
 
   const login = (userData) => {
     setUser(userData);
-    localStorage.setItem('sesion_escolar', JSON.stringify(userData));
-    
+    localStorage.setItem("sesion_escolar", JSON.stringify(userData));
+
     // Redirección automática al Dashboard general
-    router.push('/dashboard');
+    router.push("/dashboard");
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('sesion_escolar');
-    router.push('/');
+    localStorage.removeItem("sesion_escolar");
+    router.push("/");
   };
 
   return (

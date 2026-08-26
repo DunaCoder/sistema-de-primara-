@@ -1,74 +1,110 @@
-'use server';
+"use server";
 
-import { prisma } from "@/lib/db";
-import { registrarAuditoria } from "@/app/actions/auditoria";
+import { prisma } from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
 
-export async function guardarOActualizarNota({ 
-  estudianteId, 
-  estudianteNombre, 
-  materiaId, 
-  materiaNombre, 
-  lapso, 
-  nota, 
-  observacion, 
-  usuarioId, 
-  usuarioNombre, 
-  usuarioRol 
-}) {
+export async function obtenerEstudiantesPorSeccion(
+  idGradoSeccion,
+  idMateria,
+  lapso = 1,
+) {
   try {
-    // 1. Verificar si ya existe calificación previa para este estudiante, materia y lapso
-    const notaExistente = await prisma.nota.findFirst({
+    const idGS = Number(idGradoSeccion);
+    const idMat = Number(idMateria);
+    const lap = Number(lapso);
+
+    if (isNaN(idGS)) return [];
+
+    const inscritos = await prisma.inscripcion.findMany({
       where: {
-        estudianteId: Number(estudianteId),
-        materiaId: Number(materiaId),
-        lapso: String(lapso),
+        idGradoSeccion: idGS,
+        anioEscolar: "2025-2026",
+      },
+      include: {
+        estudiante: true,
+        evaluaciones: {
+          where: idMat ? { idMateria: idMat, lapso: lap } : { lapso: lap },
+        },
+      },
+      orderBy: {
+        estudiante: { apellido: "asc" },
       },
     });
 
-    let resultado;
-    let accionAudit = "";
-
-    if (notaExistente) {
-      // 2. Si existe, actualiza el registro (edición sin crear duplicados)
-      resultado = await prisma.nota.update({
-        where: { id: notaExistente.id },
-        data: {
-          calificacion: nota,
-          observacion: observacion,
-        },
-      });
-      accionAudit = "MODIFICACION_NOTA";
-    } else {
-      // 3. Si no existe, crea el registro nuevo
-      resultado = await prisma.nota.create({
-        data: {
-          estudianteId: Number(estudianteId),
-          materiaId: Number(materiaId),
-          lapso: String(lapso),
-          calificacion: nota,
-          observacion: observacion,
-        },
-      });
-      accionAudit = "CARGA_NOTA";
-    }
-
-    // 4. Auditoría automática del evento
-    await registrarAuditoria({
-      usuarioId,
-      usuarioNombre,
-      rol: usuarioRol,
-      accion: accionAudit,
-      modulo: "Notas",
-      detalles: `${accionAudit === "CARGA_NOTA" ? "Asignó" : "Actualizó"} nota '${nota}' al estudiante ${estudianteNombre} en ${materiaNombre} (${lapso}° Lapso)`,
+    return inscritos.map((i) => {
+      const evalActual = i.evaluaciones[0];
+      return {
+        idInscripcion: i.idInscripcion,
+        idEstudiante: i.estudiante.idEstudiante,
+        nombre: i.estudiante.nombre,
+        apellido: i.estudiante.apellido,
+        literal: evalActual?.literalCalificacion || "",
+        apreciacion: evalActual?.apreciacionDescriptiva || "",
+      };
     });
-
-    return {
-      success: true,
-      mensaje: notaExistente ? "Nota actualizada correctamente" : "Nota registrada con éxito",
-      data: resultado,
-    };
   } catch (error) {
-    console.error("Error al procesar la nota:", error);
-    return { success: false, mensaje: "Error de servidor al guardar la calificación." };
+    console.error("❌ Error al obtener estudiantes por sección:", error);
+    return [];
   }
 }
+
+export async function guardarCalificacionesAction({
+  idGradoSeccion,
+  idMateria,
+  lapso = 1,
+  evaluaciones,
+}) {
+  try {
+    if (!Array.isArray(evaluaciones) || evaluaciones.length === 0) {
+      return { success: false, error: "No hay evaluaciones para guardar." };
+    }
+
+    const idMateriaNum = Number(idMateria);
+    const lapsoNum = Number(lapso);
+
+    if (isNaN(idMateriaNum) || !idMateriaNum) {
+      return { success: false, error: "El campo idMateria es obligatorio." };
+    }
+
+    await prisma.$transaction(
+      evaluaciones.map((evalData) => {
+        const idInscripcionNum = Number(evalData.idInscripcion);
+        const literalCalificacion = evalData.literal
+          ? String(evalData.literal).trim()
+          : "";
+        const apreciacionDescriptiva = evalData.apreciacion
+          ? String(evalData.apreciacion).trim()
+          : "";
+
+        return prisma.evaluacionCualitativa.upsert({
+          where: {
+            idInscripcion_lapso_idMateria: {
+              idInscripcion: idInscripcionNum,
+              lapso: lapsoNum,
+              idMateria: idMateriaNum,
+            },
+          },
+          update: { literalCalificacion, apreciacionDescriptiva },
+          create: {
+            idInscripcion: idInscripcionNum,
+            idMateria: idMateriaNum,
+            lapso: lapsoNum,
+            literalCalificacion,
+            apreciacionDescriptiva,
+          },
+        });
+      }),
+    );
+
+    revalidatePath("/dashboard/gestion");
+    revalidatePath("/dashboard/notas");
+    revalidatePath("/dashboard/reportes");
+
+    return { success: true, message: "Notas guardadas con éxito." };
+  } catch (error) {
+    console.error("❌ Error al guardar calificaciones:", error);
+    return { success: false, error: "Error en base de datos." };
+  }
+}
+
+export const obtenerEstudiantesYNotas = obtenerEstudiantesPorSeccion;

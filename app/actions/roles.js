@@ -1,12 +1,12 @@
 // app/actions/roles.js
-'use server';
+"use server";
 
 export async function obtenerRoles() {
   return [
-    { id: 1, nombre: 'Docente' },
-    { id: 2, nombre: 'Secretaria' },
-    { id: 3, nombre: 'Coordinador' },
-    { id: 4, nombre: 'Administrador' },
+    { id: 1, nombre: "Docente" },
+    { id: 2, nombre: "Secretaria" },
+    { id: 3, nombre: "Coordinador" },
+    { id: 4, nombre: "Administrador" },
   ];
 }
 const { PrismaClient } = pkg;
@@ -19,7 +19,7 @@ const prisma = new PrismaClient({ adapter });
 export async function obtenerRoles() {
   try {
     return await prisma.rol.findMany({
-      orderBy: { nombre: 'asc' }
+      orderBy: { nombre: "asc" },
     });
   } catch (error) {
     console.error("❌ Error al obtener roles:", error);

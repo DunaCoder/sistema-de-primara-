@@ -1,7 +1,11 @@
-'use server';
+"use server";
 
 // 1. Acción para consultar la nómina oficial (cargada por Secretaría)
-export async function obtenerEstudiantesPorSeccion({ gradoSeccion, materia, lapso }) {
+export async function obtenerEstudiantesPorSeccion({
+  gradoSeccion,
+  materia,
+  lapso,
+}) {
   try {
     // AQUÍ REALIZAS LA CONSULTA A TU BASE DE DATOS (ej. Prisma, Drizzle, SQL)
     // Ejemplo de consulta conceptual:
@@ -9,15 +13,34 @@ export async function obtenerEstudiantesPorSeccion({ gradoSeccion, materia, laps
 
     // Datos simulados estructurados tal como los espera tu interfaz:
     const dataMock = [
-      { idInscripcion: 1, nombre: 'Aular Pérez, María Alejandra', literal: 'A', apreciacion: 'Demuestra alto compromiso y participación activa.' },
-      { idInscripcion: 2, nombre: 'Blanco Gómez, Juan José', literal: 'B', apreciacion: 'Consolida progresivamente las competencias de lectura.' },
-      { idInscripcion: 3, nombre: 'Colmenares Silva, Sofía', literal: '', apreciacion: '' },
+      {
+        idInscripcion: 1,
+        nombre: "Aular Pérez, María Alejandra",
+        literal: "A",
+        apreciacion: "Demuestra alto compromiso y participación activa.",
+      },
+      {
+        idInscripcion: 2,
+        nombre: "Blanco Gómez, Juan José",
+        literal: "B",
+        apreciacion: "Consolida progresivamente las competencias de lectura.",
+      },
+      {
+        idInscripcion: 3,
+        nombre: "Colmenares Silva, Sofía",
+        literal: "",
+        apreciacion: "",
+      },
     ];
 
     return { ok: true, data: dataMock };
   } catch (error) {
-    console.error('Error al obtener nómina:', error);
-    return { ok: false, error: 'No se pudo cargar la lista de estudiantes.', data: [] };
+    console.error("Error al obtener nómina:", error);
+    return {
+      ok: false,
+      error: "No se pudo cargar la lista de estudiantes.",
+      data: [],
+    };
   }
 }
 
@@ -37,11 +60,16 @@ export async function guardarCalificacionesSeccion(payload) {
     }
     */
 
-    console.log(`[EXITO] Calificaciones de la sección ${gradoSeccion} procesadas correctamente.`);
+    console.log(
+      `[EXITO] Calificaciones de la sección ${gradoSeccion} procesadas correctamente.`,
+    );
 
-    return { ok: true, message: 'Calificaciones guardadas exitosamente.' };
+    return { ok: true, message: "Calificaciones guardadas exitosamente." };
   } catch (error) {
-    console.error('Error al guardar calificaciones:', error);
-    return { ok: false, error: 'Ocurrió un error en el servidor al guardar la plantilla.' };
+    console.error("Error al guardar calificaciones:", error);
+    return {
+      ok: false,
+      error: "Ocurrió un error en el servidor al guardar la plantilla.",
+    };
   }
 }

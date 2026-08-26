@@ -1,75 +1,112 @@
 // app/dashboard/notas/page.jsx
-'use client'
+"use client";
 
-import { useState } from 'react';
-import Link from 'next/link';
+import { useState } from "react";
+import Link from "next/link";
 
 export default function ConsultaNotasSecretariaPage() {
   // Filtros de control
-  const [grado, setGrado] = useState('1er Grado');
-  const [seccion, setSeccion] = useState('A');
-  const [materia, setMateria] = useState('Lengua y Comunicación');
+  const [grado, setGrado] = useState("1er Grado");
+  const [seccion, setSeccion] = useState("A");
+  const [materia, setMateria] = useState("Lengua y Comunicación");
 
   // Mock estructurado con los 3 lapsos por cada estudiante
   const [estudiantes] = useState([
-    { 
-      id: 1, grado: '1er Grado', seccion: 'A', materia: 'Lengua y Comunicación', 
-      cedula: 'E-84123456', nombre: 'Carlos Eduardo', apellido: 'Mendoza Ruiz', 
-      lapso1: 16, lapso2: 18, lapso3: 17, 
-      apreciacion: 'Excelente rendimiento constante durante todo el año escolar.' 
+    {
+      id: 1,
+      grado: "1er Grado",
+      seccion: "A",
+      materia: "Lengua y Comunicación",
+      cedula: "E-84123456",
+      nombre: "Carlos Eduardo",
+      apellido: "Mendoza Ruiz",
+      lapso1: 16,
+      lapso2: 18,
+      lapso3: 17,
+      apreciacion:
+        "Excelente rendimiento constante durante todo el año escolar.",
     },
-    { 
-      id: 2, grado: '1er Grado', seccion: 'A', materia: 'Lengua y Comunicación', 
-      cedula: 'E-84987654', nombre: 'María Valentina', apellido: 'Gómez Silva', 
-      lapso1: 12, lapso2: 14, lapso3: 15, 
-      apreciacion: 'Buena evolución positiva en sus hábitos de estudio.' 
+    {
+      id: 2,
+      grado: "1er Grado",
+      seccion: "A",
+      materia: "Lengua y Comunicación",
+      cedula: "E-84987654",
+      nombre: "María Valentina",
+      apellido: "Gómez Silva",
+      lapso1: 12,
+      lapso2: 14,
+      lapso3: 15,
+      apreciacion: "Buena evolución positiva en sus hábitos de estudio.",
     },
-    { 
-      id: 3, grado: '1er Grado', seccion: 'A', materia: 'Lengua y Comunicación', 
-      cedula: 'E-84223344', nombre: 'Simón Alejandro', apellido: 'Padrón Martínez', 
-      lapso1: 18, lapso2: 19, lapso3: 20, 
-      apreciacion: 'Sobresaliente participación y dominio de los contenidos.' 
+    {
+      id: 3,
+      grado: "1er Grado",
+      seccion: "A",
+      materia: "Lengua y Comunicación",
+      cedula: "E-84223344",
+      nombre: "Simón Alejandro",
+      apellido: "Padrón Martínez",
+      lapso1: 18,
+      lapso2: 19,
+      lapso3: 20,
+      apreciacion: "Sobresaliente participación y dominio de los contenidos.",
     },
-    { 
-      id: 4, grado: '1er Grado', seccion: 'B', materia: 'Lengua y Comunicación', 
-      cedula: 'E-84556677', nombre: 'Andrés Ignacio', apellido: 'Rivas Pérez', 
-      lapso1: 9, lapso2: 11, lapso3: 12, 
-      apreciacion: 'Superó las dificultades iniciales con refuerzo académico.' 
+    {
+      id: 4,
+      grado: "1er Grado",
+      seccion: "B",
+      materia: "Lengua y Comunicación",
+      cedula: "E-84556677",
+      nombre: "Andrés Ignacio",
+      apellido: "Rivas Pérez",
+      lapso1: 9,
+      lapso2: 11,
+      lapso3: 12,
+      apreciacion: "Superó las dificultades iniciales con refuerzo académico.",
     },
-    { 
-      id: 5, grado: '2do Grado', seccion: 'A', materia: 'Lengua y Comunicación', 
-      cedula: 'E-84889900', nombre: 'Camila Isabel', apellido: 'Torres Blanco', 
-      lapso1: 19, lapso2: 20, lapso3: 18, 
-      apreciacion: 'Alto nivel académico sostenido en los tres periodos.' 
-    }
+    {
+      id: 5,
+      grado: "2do Grado",
+      seccion: "A",
+      materia: "Lengua y Comunicación",
+      cedula: "E-84889900",
+      nombre: "Camila Isabel",
+      apellido: "Torres Blanco",
+      lapso1: 19,
+      lapso2: 20,
+      lapso3: 18,
+      apreciacion: "Alto nivel académico sostenido en los tres periodos.",
+    },
   ]);
 
   // Filtrado reactivo (por Grado, Sección y Materia)
   const estudiantesFiltrados = estudiantes.filter(
-    est => est.grado === grado && 
-           est.seccion === seccion && 
-           est.materia === materia
+    (est) =>
+      est.grado === grado && est.seccion === seccion && est.materia === materia,
   );
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
-      
       {/* Encabezado Principal */}
       <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-slate-800">Consulta de Evaluaciones y Calificaciones</h1>
+            <h1 className="text-xl font-bold text-slate-800">
+              Consulta de Evaluaciones y Calificaciones
+            </h1>
             <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200">
               Vista Consolidada por Lapsos
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Resumen detallado del rendimiento de los tres lapsos pedagógicos por estudiante.
+            Resumen detallado del rendimiento de los tres lapsos pedagógicos por
+            estudiante.
           </p>
         </div>
 
-        <Link 
-          href="/dashboard/inscripciones" 
+        <Link
+          href="/dashboard/inscripciones"
           className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-sm py-2 px-4 rounded-lg transition-colors shadow-sm flex items-center gap-2 shrink-0"
         >
           ➕ Inscribir Estudiante
@@ -79,8 +116,10 @@ export default function ConsultaNotasSecretariaPage() {
       {/* Selectores / Filtros de Consulta */}
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
-          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Grado</label>
-          <select 
+          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+            Grado
+          </label>
+          <select
             value={grado}
             onChange={(e) => setGrado(e.target.value)}
             className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white font-medium focus:outline-none focus:border-indigo-500"
@@ -92,8 +131,10 @@ export default function ConsultaNotasSecretariaPage() {
         </div>
 
         <div>
-          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Sección</label>
-          <select 
+          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+            Sección
+          </label>
+          <select
             value={seccion}
             onChange={(e) => setSeccion(e.target.value)}
             className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white font-medium focus:outline-none focus:border-indigo-500"
@@ -104,8 +145,10 @@ export default function ConsultaNotasSecretariaPage() {
         </div>
 
         <div>
-          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Área / Materia</label>
-          <select 
+          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
+            Área / Materia
+          </label>
+          <select
             value={materia}
             onChange={(e) => setMateria(e.target.value)}
             className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white font-medium focus:outline-none focus:border-indigo-500"
@@ -125,7 +168,9 @@ export default function ConsultaNotasSecretariaPage() {
             <h2 className="text-sm font-bold text-slate-800">
               Nómina Consolidada — {grado} "{seccion}" ({materia})
             </h2>
-            <p className="text-xs text-slate-500">Visualización simultánea de 1er, 2do y 3er Lapso</p>
+            <p className="text-xs text-slate-500">
+              Visualización simultánea de 1er, 2do y 3er Lapso
+            </p>
           </div>
           <span className="text-xs font-mono bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-md border border-indigo-100 font-semibold">
             Matrícula: {estudiantesFiltrados.length} Estudiantes
@@ -140,29 +185,45 @@ export default function ConsultaNotasSecretariaPage() {
                 <th className="p-4 text-center">1er Lapso</th>
                 <th className="p-4 text-center">2do Lapso</th>
                 <th className="p-4 text-center">3er Lapso</th>
-                <th className="p-4 text-center bg-slate-800">Total / Promedio</th>
+                <th className="p-4 text-center bg-slate-800">
+                  Total / Promedio
+                </th>
                 <th className="p-4">Apreciación Anual</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm">
               {estudiantesFiltrados.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="p-8 text-center text-slate-400 text-xs font-medium">
-                    No existen registros consolidados para {grado} "{seccion}" en {materia}.
+                  <td
+                    colSpan="6"
+                    className="p-8 text-center text-slate-400 text-xs font-medium"
+                  >
+                    No existen registros consolidados para {grado} "{seccion}"
+                    en {materia}.
                   </td>
                 </tr>
               ) : (
                 estudiantesFiltrados.map((est) => {
-                  const promedio = ((est.lapso1 + est.lapso2 + est.lapso3) / 3).toFixed(1);
+                  const promedio = (
+                    (est.lapso1 + est.lapso2 + est.lapso3) /
+                    3
+                  ).toFixed(1);
                   const esAprobado = parseFloat(promedio) >= 10;
 
                   return (
-                    <tr key={est.id} className="hover:bg-slate-50/80 transition-colors">
+                    <tr
+                      key={est.id}
+                      className="hover:bg-slate-50/80 transition-colors"
+                    >
                       <td className="p-4">
-                        <p className="font-semibold text-slate-800">{est.apellido}, {est.nombre}</p>
-                        <p className="text-xs font-mono text-slate-500">{est.cedula}</p>
+                        <p className="font-semibold text-slate-800">
+                          {est.apellido}, {est.nombre}
+                        </p>
+                        <p className="text-xs font-mono text-slate-500">
+                          {est.cedula}
+                        </p>
                       </td>
-                      
+
                       <td className="p-4 text-center font-mono font-medium text-slate-700">
                         {est.lapso1}
                       </td>
@@ -176,17 +237,19 @@ export default function ConsultaNotasSecretariaPage() {
                       </td>
 
                       <td className="p-4 text-center bg-slate-50/50">
-                        <span className={`inline-block px-3 py-1 rounded-lg font-bold font-mono text-sm border ${
-                          esAprobado 
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
-                            : 'bg-rose-50 text-rose-700 border-rose-200'
-                        }`}>
+                        <span
+                          className={`inline-block px-3 py-1 rounded-lg font-bold font-mono text-sm border ${
+                            esAprobado
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                              : "bg-rose-50 text-rose-700 border-rose-200"
+                          }`}
+                        >
                           {promedio} pts
                         </span>
                       </td>
 
                       <td className="p-4 text-slate-600 text-xs italic">
-                        {est.apreciacion || 'Sin observaciones registradas.'}
+                        {est.apreciacion || "Sin observaciones registradas."}
                       </td>
                     </tr>
                   );
@@ -197,10 +260,11 @@ export default function ConsultaNotasSecretariaPage() {
         </div>
 
         <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-          <span>🔒 Cálculo automatizado de calificaciones por periodos académicos.</span>
+          <span>
+            🔒 Cálculo automatizado de calificaciones por periodos académicos.
+          </span>
         </div>
       </div>
-
     </div>
   );
 }

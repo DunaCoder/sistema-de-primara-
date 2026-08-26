@@ -1,21 +1,21 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { 
-  getDatosAsignacion, 
-  guardarAsignacionDocente 
-} from '@/app/actions/coordinador';
+import { useState, useEffect } from "react";
+import {
+  getDatosAsignacion,
+  guardarAsignacionDocente,
+} from "@/app/actions/coordinador";
 
 const GRADOS_LISTA = [
-  { id: '1', nombre: '1° Grado' },
-  { id: '2', nombre: '2° Grado' },
-  { id: '3', nombre: '3° Grado' },
-  { id: '4', nombre: '4° Grado' },
-  { id: '5', nombre: '5° Grado' },
-  { id: '6', nombre: '6° Grado' },
+  { id: "1", nombre: "1° Grado" },
+  { id: "2", nombre: "2° Grado" },
+  { id: "3", nombre: "3° Grado" },
+  { id: "4", nombre: "4° Grado" },
+  { id: "5", nombre: "5° Grado" },
+  { id: "6", nombre: "6° Grado" },
 ];
 
-const SECCIONES_LISTA = ['A', 'B', 'C', 'D'];
+const SECCIONES_LISTA = ["A", "B", "C", "D"];
 
 export default function AsignacionesPage() {
   const [docentes, setDocentes] = useState([]);
@@ -23,12 +23,12 @@ export default function AsignacionesPage() {
   const [resumen, setResumen] = useState([]);
   const [cargando, setCargando] = useState(true);
 
-  const [gradoSeleccionado, setGradoSeleccionado] = useState('');
-  const [seccionSeleccionada, setSeccionSeleccionada] = useState('');
-  const [idDocente, setIdDocente] = useState('');
-  const [idMateria, setIdMateria] = useState('');
+  const [gradoSeleccionado, setGradoSeleccionado] = useState("");
+  const [seccionSeleccionada, setSeccionSeleccionada] = useState("");
+  const [idDocente, setIdDocente] = useState("");
+  const [idMateria, setIdMateria] = useState("");
 
-  const [mensaje, setMensaje] = useState({ tipo: '', texto: '' });
+  const [mensaje, setMensaje] = useState({ tipo: "", texto: "" });
 
   const cargarDatos = async () => {
     setCargando(true);
@@ -52,10 +52,18 @@ export default function AsignacionesPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setMensaje({ tipo: '', texto: '' });
+    setMensaje({ tipo: "", texto: "" });
 
-    if (!idDocente || !gradoSeleccionado || !seccionSeleccionada || !idMateria) {
-      setMensaje({ tipo: 'error', texto: 'Todos los campos son obligatorios.' });
+    if (
+      !idDocente ||
+      !gradoSeleccionado ||
+      !seccionSeleccionada ||
+      !idMateria
+    ) {
+      setMensaje({
+        tipo: "error",
+        texto: "Todos los campos son obligatorios.",
+      });
       return;
     }
 
@@ -67,14 +75,20 @@ export default function AsignacionesPage() {
     });
 
     if (res.success) {
-      setMensaje({ tipo: 'exito', texto: 'Asignación registrada exitosamente.' });
-      setIdDocente('');
-      setGradoSeleccionado('');
-      setSeccionSeleccionada('');
-      setIdMateria('');
+      setMensaje({
+        tipo: "exito",
+        texto: "Asignación registrada exitosamente.",
+      });
+      setIdDocente("");
+      setGradoSeleccionado("");
+      setSeccionSeleccionada("");
+      setIdMateria("");
       cargarDatos();
     } else {
-      setMensaje({ tipo: 'error', texto: res.error || 'Error al guardar la asignación.' });
+      setMensaje({
+        tipo: "error",
+        texto: res.error || "Error al guardar la asignación.",
+      });
     }
   };
 
@@ -86,25 +100,36 @@ export default function AsignacionesPage() {
         </h2>
 
         {mensaje.texto && (
-          <div className={`p-3 mb-4 rounded text-sm font-medium ${mensaje.tipo === 'exito' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}`}>
+          <div
+            className={`p-3 mb-4 rounded text-sm font-medium ${mensaje.tipo === "exito" ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"}`}
+          >
             {mensaje.texto}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-slate-800 mb-1">Docente</label>
+            <label className="block text-sm font-semibold text-slate-800 mb-1">
+              Docente
+            </label>
             <select
               value={idDocente}
               onChange={(e) => setIdDocente(e.target.value)}
               className="w-full border border-slate-300 rounded-lg p-2.5 text-sm bg-white text-slate-900 outline-none focus:ring-2 focus:ring-indigo-500"
             >
               <option value="" className="text-slate-900 bg-white">
-                {cargando ? '-- Cargando docentes de la BD... --' : '-- Seleccione Docente --'}
+                {cargando
+                  ? "-- Cargando docentes de la BD... --"
+                  : "-- Seleccione Docente --"}
               </option>
               {docentes.map((d) => (
-                <option key={d.idPersonal} value={d.idPersonal} className="text-slate-900 bg-white">
-                  {d.nombre} {d.apellido} {d.cedula ? `(C.I. V-${d.cedula})` : ''}
+                <option
+                  key={d.idPersonal}
+                  value={d.idPersonal}
+                  className="text-slate-900 bg-white"
+                >
+                  {d.nombre} {d.apellido}{" "}
+                  {d.cedula ? `(C.I. V-${d.cedula})` : ""}
                 </option>
               ))}
             </select>
@@ -112,44 +137,72 @@ export default function AsignacionesPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-semibold text-slate-800 mb-1">Grado</label>
+              <label className="block text-sm font-semibold text-slate-800 mb-1">
+                Grado
+              </label>
               <select
                 value={gradoSeleccionado}
                 onChange={(e) => setGradoSeleccionado(e.target.value)}
                 className="w-full border border-slate-300 rounded-lg p-2.5 text-sm bg-white text-slate-900 outline-none focus:ring-2 focus:ring-indigo-500"
               >
-                <option value="" className="text-slate-900 bg-white">-- Grado --</option>
+                <option value="" className="text-slate-900 bg-white">
+                  -- Grado --
+                </option>
                 {GRADOS_LISTA.map((g) => (
-                  <option key={g.id} value={g.id} className="text-slate-900 bg-white">{g.nombre}</option>
+                  <option
+                    key={g.id}
+                    value={g.id}
+                    className="text-slate-900 bg-white"
+                  >
+                    {g.nombre}
+                  </option>
                 ))}
               </select>
             </div>
 
             <div>
-              <label className="block text-sm font-semibold text-slate-800 mb-1">Sección</label>
+              <label className="block text-sm font-semibold text-slate-800 mb-1">
+                Sección
+              </label>
               <select
                 value={seccionSeleccionada}
                 onChange={(e) => setSeccionSeleccionada(e.target.value)}
                 className="w-full border border-slate-300 rounded-lg p-2.5 text-sm bg-white text-slate-900 outline-none focus:ring-2 focus:ring-indigo-500"
               >
-                <option value="" className="text-slate-900 bg-white">-- Sección --</option>
+                <option value="" className="text-slate-900 bg-white">
+                  -- Sección --
+                </option>
                 {SECCIONES_LISTA.map((sec) => (
-                  <option key={sec} value={sec} className="text-slate-900 bg-white">Sección "{sec}"</option>
+                  <option
+                    key={sec}
+                    value={sec}
+                    className="text-slate-900 bg-white"
+                  >
+                    Sección "{sec}"
+                  </option>
                 ))}
               </select>
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-slate-800 mb-1">Materia / Especialidad</label>
+            <label className="block text-sm font-semibold text-slate-800 mb-1">
+              Materia / Especialidad
+            </label>
             <select
               value={idMateria}
               onChange={(e) => setIdMateria(e.target.value)}
               className="w-full border border-slate-300 rounded-lg p-2.5 text-sm bg-white text-slate-900 outline-none focus:ring-2 focus:ring-indigo-500"
             >
-              <option value="" className="text-slate-900 bg-white">-- Seleccione Materia --</option>
+              <option value="" className="text-slate-900 bg-white">
+                -- Seleccione Materia --
+              </option>
               {materias.map((m) => (
-                <option key={m.idMateria} value={m.idMateria} className="text-slate-900 bg-white">
+                <option
+                  key={m.idMateria}
+                  value={m.idMateria}
+                  className="text-slate-900 bg-white"
+                >
                   {m.nombre}
                 </option>
               ))}
@@ -176,7 +229,9 @@ export default function AsignacionesPage() {
         </div>
 
         {resumen.length === 0 ? (
-          <p className="text-slate-600 text-sm">No hay asignaciones registradas hasta el momento.</p>
+          <p className="text-slate-600 text-sm">
+            No hay asignaciones registradas hasta el momento.
+          </p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left text-slate-800">
@@ -189,12 +244,19 @@ export default function AsignacionesPage() {
               </thead>
               <tbody>
                 {resumen.map((item) => (
-                  <tr key={item.idAsignacion} className="border-b hover:bg-slate-50">
+                  <tr
+                    key={item.idAsignacion}
+                    className="border-b hover:bg-slate-50"
+                  >
                     <td className="px-4 py-3 font-medium text-slate-900">
-                      {item.docente ? `${item.docente.nombre} ${item.docente.apellido}` : item.idDocente}
+                      {item.docente
+                        ? `${item.docente.nombre} ${item.docente.apellido}`
+                        : item.idDocente}
                     </td>
                     <td className="px-4 py-3 text-slate-800">
-                      {item.gradoSeccion ? `${item.gradoSeccion.grado} - Secc "${item.gradoSeccion.seccion}"` : item.idGradoSeccion}
+                      {item.gradoSeccion
+                        ? `${item.gradoSeccion.grado} - Secc "${item.gradoSeccion.seccion}"`
+                        : item.idGradoSeccion}
                     </td>
                     <td className="px-4 py-3 text-slate-800">
                       {item.materia ? item.materia.nombre : item.idMateria}

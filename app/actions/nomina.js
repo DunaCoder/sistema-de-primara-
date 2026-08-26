@@ -1,5 +1,5 @@
 // app/actions/usuarios.js
-'use server'
+"use server";
 
 import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
@@ -31,7 +31,7 @@ export async function obtenerUsuarios() {
         */
       },
       orderBy: {
-        idUsuario: 'desc',
+        idUsuario: "desc",
       },
     });
 
@@ -39,15 +39,15 @@ export async function obtenerUsuarios() {
     const dataFormateada = usuarios.map((u) => ({
       ...u,
       id: u.idUsuario,
-      activo: u.estado === 'ACTIVO' || u.estado === true,
+      activo: u.estado === "ACTIVO" || u.estado === true,
     }));
 
     return { success: true, data: dataFormateada };
   } catch (error) {
     console.error("❌ Error al obtener usuarios:", error);
-    return { 
-      success: false, 
-      error: "Error de servidor al consultar la lista de usuarios." 
+    return {
+      success: false,
+      error: "Error de servidor al consultar la lista de usuarios.",
     };
   }
 }
@@ -62,18 +62,21 @@ export async function actualizarUsuario({ id, username, activo }) {
     const dataToUpdate = {};
 
     if (username !== undefined) {
-      const usernameLimpio = username.toLowerCase().replace(/\s+/g, '');
-      
+      const usernameLimpio = username.toLowerCase().replace(/\s+/g, "");
+
       // Validar si el username ya está en uso por otro usuario
       const existe = await prisma.usuario.findFirst({
         where: {
           username: usernameLimpio,
-          NOT: { idUsuario: Number(id) }
-        }
+          NOT: { idUsuario: Number(id) },
+        },
       });
 
       if (existe) {
-        return { success: false, error: "El nombre de usuario ya se encuentra registrado." };
+        return {
+          success: false,
+          error: "El nombre de usuario ya se encuentra registrado.",
+        };
       }
 
       dataToUpdate.username = usernameLimpio;
@@ -82,9 +85,8 @@ export async function actualizarUsuario({ id, username, activo }) {
     if (activo !== undefined) {
       // Si tu esquema de DB usa Boolean para estado usa: activo (Boolean)
       // Si usa un String de Enum o VARCHAR usa: activo ? 'ACTIVO' : 'INACTIVO'
-      dataToUpdate.estado = typeof activo === 'boolean' 
-        ? (activo ? 'ACTIVO' : 'INACTIVO') 
-        : activo;
+      dataToUpdate.estado =
+        typeof activo === "boolean" ? (activo ? "ACTIVO" : "INACTIVO") : activo;
     }
 
     const usuarioActualizado = await prisma.usuario.update({
@@ -103,7 +105,8 @@ export async function actualizarUsuario({ id, username, activo }) {
     console.error("❌ Error al actualizar usuario:", error);
     return {
       success: false,
-      error: "No se pudo actualizar la información del usuario en la base de datos.",
+      error:
+        "No se pudo actualizar la información del usuario en la base de datos.",
     };
   }
 }

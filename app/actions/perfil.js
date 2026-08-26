@@ -1,5 +1,5 @@
 // app/actions/perfil.js
-'use server'
+"use server";
 
 import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
@@ -13,7 +13,7 @@ const prisma = new PrismaClient({ adapter });
 
 export async function obtenerPerfilAction(idUsuario) {
   console.log("📥 ID recibido:", idUsuario, "Tipo:", typeof idUsuario);
-  
+
   try {
     // Validación simple
     if (!idUsuario) {
@@ -31,7 +31,7 @@ export async function obtenerPerfilAction(idUsuario) {
 
     // 🔥 CONSULTA SIMPLE: sin relaciones, solo usuario
     const usuario = await prisma.usuario.findUnique({
-      where: { idUsuario: id }
+      where: { idUsuario: id },
     });
 
     console.log("📦 Resultado de findUnique:", usuario);
@@ -42,23 +42,22 @@ export async function obtenerPerfilAction(idUsuario) {
     }
 
     // ✅ Éxito: devolvemos solo lo que existe
-    return { 
-      success: true, 
+    return {
+      success: true,
       data: {
         idUsuario: usuario.idUsuario,
         username: usuario.username,
         rol: usuario.rol,
         estado: usuario.estado,
         // Sin nombre/apellido/email porque no están en Usuario
-      }
+      },
     };
-
   } catch (error) {
     console.error("❌ ERROR DETALLADO:", error);
     console.error("Stack trace:", error.stack);
-    return { 
-      success: false, 
-      error: `Error en servidor: ${error.message}` 
+    return {
+      success: false,
+      error: `Error en servidor: ${error.message}`,
     };
   }
 }

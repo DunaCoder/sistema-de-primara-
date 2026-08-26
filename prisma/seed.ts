@@ -1,43 +1,43 @@
-import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcryptjs';
+import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
 async function main() {
   // 1. Crear Roles Maestros
   const rolAdmin = await prisma.rol.upsert({
-    where: { nombre: 'ADMINISTRADOR' },
+    where: { nombre: "ADMINISTRADOR" },
     update: {},
-    create: { nombre: 'ADMINISTRADOR' },
+    create: { nombre: "ADMINISTRADOR" },
   });
 
   const rolCoordinador = await prisma.rol.upsert({
-    where: { nombre: 'COORDINADOR' },
+    where: { nombre: "COORDINADOR" },
     update: {},
-    create: { nombre: 'COORDINADOR' },
+    create: { nombre: "COORDINADOR" },
   });
 
   const rolDocente = await prisma.rol.upsert({
-    where: { nombre: 'DOCENTE' },
+    where: { nombre: "DOCENTE" },
     update: {},
-    create: { nombre: 'DOCENTE' },
+    create: { nombre: "DOCENTE" },
   });
 
   const rolSecretaria = await prisma.rol.upsert({
-    where: { nombre: 'SECRETARIA' },
+    where: { nombre: "SECRETARIA" },
     update: {},
-    create: { nombre: 'SECRETARIA' },
+    create: { nombre: "SECRETARIA" },
   });
 
   // 2. Hash para contraseña inicial provisional ("123456")
-  const defaultPassword = await bcrypt.hash('123456', 10);
+  const defaultPassword = await bcrypt.hash("123456", 10);
 
   // 3. Crear o Actualizar Usuarios de Prueba para cada Rol
   const usuariosPrueba = [
-    { username: 'admin', idRol: rolAdmin.idRol },
-    { username: 'coordinador', idRol: rolCoordinador.idRol },
-    { username: 'docente', idRol: rolDocente.idRol },
-    { username: 'secretaria', idRol: rolSecretaria.idRol },
+    { username: "admin", idRol: rolAdmin.idRol },
+    { username: "coordinador", idRol: rolCoordinador.idRol },
+    { username: "docente", idRol: rolDocente.idRol },
+    { username: "secretaria", idRol: rolSecretaria.idRol },
   ];
 
   for (const user of usuariosPrueba) {
@@ -59,12 +59,14 @@ async function main() {
     });
   }
 
-  console.log('✅ Base de datos sembrada con éxito. Todos los usuarios de prueba fueron actualizados con la clave: 123456');
+  console.log(
+    "✅ Base de datos sembrada con éxito. Todos los usuarios de prueba fueron actualizados con la clave: 123456",
+  );
 }
 
 main()
   .catch((e) => {
-    console.error('❌ Error en el seed:', e);
+    console.error("❌ Error en el seed:", e);
     process.exit(1);
   })
   .finally(async () => {

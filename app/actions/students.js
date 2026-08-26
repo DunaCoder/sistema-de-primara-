@@ -1,12 +1,12 @@
-'use server'
+"use server";
 
-import { revalidatePath } from 'next/cache';
+import { revalidatePath } from "next/cache";
 
 // 1. Buscar representante previo por cédula
 export async function buscarRepresentanteAction(idRepresentante) {
   try {
     if (!idRepresentante) {
-      return { success: false, message: 'ID de representante requerido' };
+      return { success: false, message: "ID de representante requerido" };
     }
 
     // TODO: Reemplaza con tu consulta real a base de datos (ej. Prisma/PostgreSQL)
@@ -18,7 +18,7 @@ export async function buscarRepresentanteAction(idRepresentante) {
     }
     */
 
-    return { success: false, message: 'Representante no encontrado' };
+    return { success: false, message: "Representante no encontrado" };
   } catch (error) {
     return { success: false, error: error.message };
   }
@@ -27,30 +27,38 @@ export async function buscarRepresentanteAction(idRepresentante) {
 // 2. Registrar inscripción completa (Representante + Lista de Estudiantes)
 export async function registrarInscripcionAction(payload) {
   try {
-    const { 
-      anioEscolar, 
-      idRepresentante, 
-      nombreRep, 
-      apellidoRep, 
-      telefono, 
-      direccionRep, 
-      estudiantes 
+    const {
+      anioEscolar,
+      idRepresentante,
+      nombreRep,
+      apellidoRep,
+      telefono,
+      direccionRep,
+      estudiantes,
     } = payload;
 
-    if (!idRepresentante || !nombreRep || !estudiantes || estudiantes.length === 0) {
-      return { success: false, error: 'Faltan datos obligatorios para la inscripción' };
+    if (
+      !idRepresentante ||
+      !nombreRep ||
+      !estudiantes ||
+      estudiantes.length === 0
+    ) {
+      return {
+        success: false,
+        error: "Faltan datos obligatorios para la inscripción",
+      };
     }
 
     // TODO: Guarda aquí en base de datos la inscripción del representante y sus estudiantes
 
     // Revalidamos las rutas para actualizar los listados en tiempo real
-    revalidatePath('/dashboard/estudiantes');
-    revalidatePath('/dashboard/matricula');
+    revalidatePath("/dashboard/estudiantes");
+    revalidatePath("/dashboard/matricula");
 
-    return { success: true, message: 'Inscripción procesada correctamente' };
+    return { success: true, message: "Inscripción procesada correctamente" };
   } catch (error) {
-    console.error('Error al registrar inscripción:', error);
-    return { success: false, error: 'Error interno en el servidor al guardar' };
+    console.error("Error al registrar inscripción:", error);
+    return { success: false, error: "Error interno en el servidor al guardar" };
   }
 }
 
@@ -63,7 +71,7 @@ export async function obtenerMatriculaGeneral() {
     // Retorna el array de la matrícula
     return [];
   } catch (error) {
-    console.error('Error al obtener matrícula general:', error);
+    console.error("Error al obtener matrícula general:", error);
     return [];
   }
 }

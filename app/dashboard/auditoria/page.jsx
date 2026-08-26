@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { obtenerAuditoria } from '@/actions/auditoria';
+import { useState, useEffect } from "react";
+import { obtenerAuditoria } from "@/actions/auditoria";
 
 export default function AuditoriaPage() {
   const [logs, setLogs] = useState([]);
   const [cargando, setCargando] = useState(true);
-  const [filtro, setFiltro] = useState('');
+  const [filtro, setFiltro] = useState("");
 
   useEffect(() => {
     async function cargar() {
@@ -25,11 +25,12 @@ export default function AuditoriaPage() {
   }, []);
 
   // Filtrado dinámico en tiempo real
-  const logsFiltrados = logs.filter((log) =>
-    log.usuarioNombre?.toLowerCase().includes(filtro.toLowerCase()) ||
-    log.modulo?.toLowerCase().includes(filtro.toLowerCase()) ||
-    log.accion?.toLowerCase().includes(filtro.toLowerCase()) ||
-    log.detalles?.toLowerCase().includes(filtro.toLowerCase())
+  const logsFiltrados = logs.filter(
+    (log) =>
+      log.usuarioNombre?.toLowerCase().includes(filtro.toLowerCase()) ||
+      log.modulo?.toLowerCase().includes(filtro.toLowerCase()) ||
+      log.accion?.toLowerCase().includes(filtro.toLowerCase()) ||
+      log.detalles?.toLowerCase().includes(filtro.toLowerCase()),
   );
 
   return (
@@ -37,7 +38,9 @@ export default function AuditoriaPage() {
       {/* Encabezado y Filtro Rápido */}
       <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-xl font-bold text-slate-800">🛡️ Bitácora y Auditoría del Sistema</h1>
+          <h1 className="text-xl font-bold text-slate-800">
+            🛡️ Bitácora y Auditoría del Sistema
+          </h1>
           <p className="text-xs text-slate-500 mt-1">
             Registro inmutable de eventos de seguridad y operaciones del plantel
           </p>
@@ -54,9 +57,13 @@ export default function AuditoriaPage() {
       {/* Tabla de Registros */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         {cargando ? (
-          <div className="p-8 text-center text-xs text-slate-400">Cargando registros de auditoría...</div>
+          <div className="p-8 text-center text-xs text-slate-400">
+            Cargando registros de auditoría...
+          </div>
         ) : logsFiltrados.length === 0 ? (
-          <div className="p-8 text-center text-xs text-slate-400">No se encontraron eventos registrados.</div>
+          <div className="p-8 text-center text-xs text-slate-400">
+            No se encontraron eventos registrados.
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs text-slate-700">
@@ -72,19 +79,30 @@ export default function AuditoriaPage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {logsFiltrados.map((log) => (
-                  <tr key={log.id} className="hover:bg-slate-50 transition-colors">
+                  <tr
+                    key={log.id}
+                    className="hover:bg-slate-50 transition-colors"
+                  >
                     <td className="p-3 whitespace-nowrap font-mono text-[11px]">
-                      {log.fecha ? new Date(log.fecha).toLocaleString('es-VE') : 'N/A'}
+                      {log.fecha
+                        ? new Date(log.fecha).toLocaleString("es-VE")
+                        : "N/A"}
                     </td>
-                    <td className="p-3 font-semibold text-slate-800">{log.usuarioNombre || 'Desconocido'}</td>
+                    <td className="p-3 font-semibold text-slate-800">
+                      {log.usuarioNombre || "Desconocido"}
+                    </td>
                     <td className="p-3">
                       <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 uppercase">
-                        {log.rol || 'SIN ROL'}
+                        {log.rol || "SIN ROL"}
                       </span>
                     </td>
-                    <td className="p-3 font-medium text-slate-800 uppercase">{log.modulo || 'GENERAL'}</td>
+                    <td className="p-3 font-medium text-slate-800 uppercase">
+                      {log.modulo || "GENERAL"}
+                    </td>
                     <td className="p-3">
-                      <span className="font-semibold text-slate-700">{log.accion}</span>
+                      <span className="font-semibold text-slate-700">
+                        {log.accion}
+                      </span>
                     </td>
                     <td className="p-3 text-slate-600 max-w-md break-words">
                       {log.detalles}

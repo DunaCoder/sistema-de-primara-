@@ -1,17 +1,17 @@
-'use server';
+"use server";
 
-import { prisma } from '@/app/lib/prisma';
+import { prisma } from "@/lib/prisma";
 
 // Lista de respaldo para asegurar que las materias de primaria siempre estén disponibles
 const MATERIAS_PREDETERMINADAS = [
-  { nombre: 'Lengua y Literatura' },
-  { nombre: 'Matemática' },
-  { nombre: 'Ciencias Naturales' },
-  { nombre: 'Ciencias Sociales' },
-  { nombre: 'Educación Física y Deportes' },
-  { nombre: 'Educación Musical' },
-  { nombre: 'Computación e Informática' },
-  { nombre: 'Inglés' },
+  { nombre: "Lengua y Literatura" },
+  { nombre: "Matemática" },
+  { nombre: "Ciencias Naturales" },
+  { nombre: "Ciencias Sociales" },
+  { nombre: "Educación Física y Deportes" },
+  { nombre: "Educación Musical" },
+  { nombre: "Computación e Informática" },
+  { nombre: "Inglés" },
 ];
 
 export async function getDatosAsignacion() {
@@ -22,8 +22,8 @@ export async function getDatosAsignacion() {
         usuario: {
           rol: {
             nombre: {
-              contains: 'docente',
-              mode: 'insensitive',
+              contains: "docente",
+              mode: "insensitive",
             },
           },
         },
@@ -43,7 +43,7 @@ export async function getDatosAsignacion() {
 
     // 2. Traer materias de la BD. Si está vacía, la poblamos automáticamente.
     let materiasBD = await prisma.materia.findMany({
-      orderBy: { idMateria: 'asc' },
+      orderBy: { idMateria: "asc" },
     });
 
     if (materiasBD.length === 0) {
@@ -51,7 +51,7 @@ export async function getDatosAsignacion() {
         data: MATERIAS_PREDETERMINADAS,
       });
       materiasBD = await prisma.materia.findMany({
-        orderBy: { idMateria: 'asc' },
+        orderBy: { idMateria: "asc" },
       });
     }
 
@@ -62,7 +62,7 @@ export async function getDatosAsignacion() {
         gradoSeccion: true,
         materia: true,
       },
-      orderBy: { idAsignacion: 'desc' },
+      orderBy: { idAsignacion: "desc" },
     });
 
     return {
@@ -72,8 +72,8 @@ export async function getDatosAsignacion() {
       asignaciones: asignacionesBD,
     };
   } catch (error) {
-    console.error('❌ Error en getDatosAsignacion:', error);
-    return { success: false, error: 'Error al consultar datos iniciales.' };
+    console.error("❌ Error en getDatosAsignacion:", error);
+    return { success: false, error: "Error al consultar datos iniciales." };
   }
 }
 
@@ -90,11 +90,11 @@ export async function guardarAsignacionDocente(data) {
         AND: [
           {
             OR: [
-              { grado: { contains: gradoNum, mode: 'insensitive' } },
+              { grado: { contains: gradoNum, mode: "insensitive" } },
               { grado: { equals: `${gradoNum}° Grado` } },
             ],
           },
-          { seccion: { equals: seccionTxt, mode: 'insensitive' } },
+          { seccion: { equals: seccionTxt, mode: "insensitive" } },
         ],
       },
     });
@@ -119,12 +119,13 @@ export async function guardarAsignacionDocente(data) {
 
     return { success: true };
   } catch (error) {
-    console.error('❌ Error exacto en guardarAsignacionDocente:', error);
-    return { 
-      success: false, 
-      error: error.code === 'P2002' 
-        ? 'Este docente ya tiene asignada esa materia en este grado y sección.' 
-        : 'No se pudo guardar la asignación en la base de datos.' 
+    console.error("❌ Error exacto en guardarAsignacionDocente:", error);
+    return {
+      success: false,
+      error:
+        error.code === "P2002"
+          ? "Este docente ya tiene asignada esa materia en este grado y sección."
+          : "No se pudo guardar la asignación en la base de datos.",
     };
   }
 }

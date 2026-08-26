@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useAuth } from '../context/AuthContext';
-import { useRouter, usePathname } from 'next/navigation';
-import { useEffect } from 'react';
-import Link from 'next/link';
+import { useAuth } from "../context/AuthContext";
+import { useRouter, usePathname } from "next/navigation";
+import { useEffect } from "react";
+import Link from "next/link";
 
 export default function DashboardLayout({ children }) {
   const { user, logout, loading } = useAuth();
@@ -12,14 +12,16 @@ export default function DashboardLayout({ children }) {
 
   useEffect(() => {
     if (!loading && !user) {
-      router.push('/');
+      router.push("/");
     }
   }, [user, loading, router]);
 
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <p className="text-slate-600 font-medium animate-pulse">Cargando sistema...</p>
+        <p className="text-slate-600 font-medium animate-pulse">
+          Cargando sistema...
+        </p>
       </div>
     );
   }
@@ -27,85 +29,104 @@ export default function DashboardLayout({ children }) {
   if (!user) return null;
 
   // Normalización estricta del rol (elimina acentos, espacios extra y convierte a mayúsculas)
-  const rolBruto = typeof user.rol === 'string' ? user.rol : user.rol?.nombre || '';
+  const rolBruto =
+    typeof user.rol === "string" ? user.rol : user.rol?.nombre || "";
   const userRol = rolBruto
     .trim()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
     .toUpperCase();
 
   // Matriz de accesos y navegación
   const menuItems = [
-    { 
-      label: 'Inicio', 
-      path: '/dashboard', 
-      icon: '🏠', 
-      roles: ['ADMINISTRADOR', 'ADMIN', 'COORDINADOR', 'COORDINACION', 'DOCENTE', 'PROFESOR', 'SECRETARIA', 'SECRETARIO'] 
+    {
+      label: "Inicio",
+      path: "/dashboard",
+      icon: "🏠",
+      roles: [
+        "ADMINISTRADOR",
+        "ADMIN",
+        "COORDINADOR",
+        "COORDINACION",
+        "DOCENTE",
+        "PROFESOR",
+        "SECRETARIA",
+        "SECRETARIO",
+      ],
     },
 
     // --- ADMINISTRADOR (Mantenimiento Técnico y Seguridad) ---
-    { 
-      label: 'Gestión de Cuentas', 
-      path: '/dashboard/usuarios', 
-      icon: '👤', 
-      roles: ['ADMINISTRADOR', 'ADMIN'] 
+    {
+      label: "Gestión de Cuentas",
+      path: "/dashboard/usuarios",
+      icon: "👤",
+      roles: ["ADMINISTRADOR", "ADMIN"],
     },
-    { 
-      label: 'Bitácora de Auditoría', 
-      path: '/dashboard/auditoria', 
-      icon: '🛡️', 
-      roles: ['ADMINISTRADOR', 'ADMIN'] 
+    {
+      label: "Bitácora de Auditoría",
+      path: "/dashboard/auditoria",
+      icon: "🛡️",
+      roles: ["ADMINISTRADOR", "ADMIN"],
     },
 
     // --- COORDINADOR (Gestión Académica y Asignaciones) ---
-    { 
-      label: 'Asignar Materias', 
-      path: '/dashboard/asignaciones', 
-      icon: '📚', 
-      roles: ['COORDINADOR', 'COORDINACION'] 
+    {
+      label: "Asignar Materias",
+      path: "/dashboard/asignaciones",
+      icon: "📚",
+      roles: ["COORDINADOR", "COORDINACION"],
     },
-    { 
-      label: 'Cierre de Lapso', 
-      path: '/dashboard/cerra', 
-      icon: '🔒', 
-      roles: ['COORDINADOR', 'COORDINACION'] 
+    {
+      label: "Cierre de Lapso",
+      path: "/dashboard/cerra",
+      icon: "🔒",
+      roles: ["COORDINADOR", "COORDINACION"],
     },
 
     // --- SECRETARÍA (Registro y Matrícula) ---
-    { 
-      label: 'Inscribir Estudiante', 
-      path: '/dashboard/inscripciones', 
-      icon: '📝', 
-      roles: ['SECRETARIA', 'SECRETARIO'] 
+    {
+      label: "Inscribir Estudiante",
+      path: "/dashboard/inscripciones",
+      icon: "📝",
+      roles: ["SECRETARIA", "SECRETARIO"],
     },
-    { 
-      label: 'Matrícula Escolar', 
-      path: '/dashboard/estudiante', 
-      icon: '👨‍🎓', 
-      roles: ['SECRETARIA', 'SECRETARIO'] 
+    {
+      label: "Matrícula Escolar",
+      path: "/dashboard/estudiante",
+      icon: "👨‍🎓",
+      roles: ["SECRETARIA", "SECRETARIO"],
     },
 
     // --- DOCENTE (Evaluación y Notas) ---
-    { 
-      label: 'Mis Secciones', 
-      path: '/dashboard/reportes', 
-      icon: '📄', 
-      roles: ['DOCENTE', 'PROFESOR'] 
+    {
+      label: "Mis Secciones",
+      path: "/dashboard/reportes",
+      icon: "📄",
+      roles: ["DOCENTE", "PROFESOR"],
     },
-    { 
-      label: 'Cargar Calificaciones', 
-      path: '/dashboard/gestion', 
-      icon: '✏️', 
-      roles: ['DOCENTE', 'PROFESOR'] 
+    {
+      label: "Cargar Calificaciones",
+      path: "/dashboard/gestion",
+      icon: "✏️",
+      roles: ["DOCENTE", "PROFESOR"],
     },
 
     // --- PERFIL GENERAL ---
-    { 
-      label: 'Mi Perfil', 
-      path: '/dashboard/perfil', 
-      icon: '⚙️', 
-      roles: ['ADMINISTRADOR', 'ADMIN', 'COORDINADOR', 'COORDINACION', 'DOCENTE', 'PROFESOR', 'SECRETARIA', 'SECRETARIO'] 
-    }
+    {
+      label: "Mi Perfil",
+      path: "/dashboard/perfil",
+      icon: "⚙️",
+      roles: [
+        "ADMINISTRADOR",
+        "ADMIN",
+        "COORDINADOR",
+        "COORDINACION",
+        "DOCENTE",
+        "PROFESOR",
+        "SECRETARIA",
+        "SECRETARIO",
+      ],
+    },
   ];
 
   return (
@@ -115,8 +136,12 @@ export default function DashboardLayout({ children }) {
         <div className="space-y-6">
           {/* Encabezado Institucional */}
           <div className="border-b border-slate-700 pb-4 text-center md:text-left">
-            <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider">U.E.N. Bicentenario</h2>
-            <p className="text-xs text-indigo-400 mt-1 font-medium">Gestión Escolar</p>
+            <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider">
+              U.E.N. Bicentenario
+            </h2>
+            <p className="text-xs text-indigo-400 mt-1 font-medium">
+              Gestión Escolar
+            </p>
           </div>
 
           {/* Tarjeta de Usuario Activo */}
@@ -126,7 +151,8 @@ export default function DashboardLayout({ children }) {
               {user.nombreCompleto || user.nombre || user.username}
             </p>
             <p className="text-xs text-slate-400 mt-1">
-              Rol: <span className="text-indigo-300 font-semibold">{userRol}</span>
+              Rol:{" "}
+              <span className="text-indigo-300 font-semibold">{userRol}</span>
             </p>
           </div>
 
@@ -144,9 +170,9 @@ export default function DashboardLayout({ children }) {
                   key={item.path}
                   href={item.path}
                   className={`w-full flex items-center gap-3 py-2.5 px-3 text-sm rounded-lg font-medium transition-all ${
-                    isActive 
-                      ? 'bg-indigo-600 text-white shadow-md' 
-                      : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                    isActive
+                      ? "bg-indigo-600 text-white shadow-md"
+                      : "text-slate-400 hover:bg-slate-800 hover:text-white"
                   }`}
                 >
                   <span>{item.icon}</span>
@@ -158,8 +184,8 @@ export default function DashboardLayout({ children }) {
         </div>
 
         {/* Cierre de Sesión */}
-        <button 
-          onClick={logout} 
+        <button
+          onClick={logout}
           className="w-full bg-rose-600 hover:bg-rose-700 text-white font-medium text-sm py-2.5 rounded-lg transition-colors shadow-sm mt-6 flex items-center justify-center gap-2 cursor-pointer"
         >
           <span>🚪</span> Cerrar Sesión
