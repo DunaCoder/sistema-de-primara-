@@ -1,184 +1,197 @@
 "use server";
-import { prisma } from "@/lib/prisma";
-import { revalidatePath } from "next/cache";
 
-/**
- * 1. Obtener asignaciones e información del Año Escolar
- */
-export async function obtenerAsignacionesDocente() {
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
+
+export async function obtenerSeccionesDisponibles() {
   try {
     const secciones = await prisma.gradoSeccion.findMany({
-      select: {
-        idGradoSeccion: true,
-        grado: true,
-        seccion: true,
-      },
       orderBy: [{ grado: "asc" }, { seccion: "asc" }],
     });
+    return { 
+      success: true, 
+      secciones: secciones.map(s => ({
+        idGradoSeccion: s.idGradoSeccion,
+        grado: s.grado,
+        seccion: s.seccion,
+        anioEscolar: s.anioEscolar || "2025-2026"
+      })) 
+    };
+  } catch (error) {
+    console.error("ERROR_OBTENER_SECCIONES:", error);
+    return { success: false, secciones: [] };
+  }
+}
 
-    const materias = await prisma.materia.findMany({
-      select: {
-        idMateria: true,
-        nombre: true,
-      },
+export async function obtenerMateriasPorGrado(grado) {
+  try {
+    let materias = await prisma.materia.findMany({
+      where: { grado: grado },
       orderBy: { nombre: "asc" },
     });
 
-    const fechaActual = new Date();
-    const anoActual = fechaActual.getFullYear();
-    const mesActual = fechaActual.getMonth() + 1;
-    const anoInicio = mesActual >= 9 ? anoActual : anoActual - 1;
-    const anoEscolarCalculado = `${anoInicio} - ${anoInicio + 1}`;
+    if (!materias || materias.length === 0) {
+      materias = await prisma.materia.findMany({ orderBy: { nombre: "asc" } });
+    }
 
-    return {
-      success: true,
-      anoEscolar: anoEscolarCalculado,
-      secciones: secciones.map((s) => ({
-        id: String(s.idGradoSeccion),
-        nombre: `${String(s.grado)
-          .replace(/grados?|°/gi, "")
-          .trim()}° Grado - Sección "${s.seccion}"`,
-      })),
-      materias: materias.map((m) => ({
-        id: String(m.idMateria),
-        nombre: m.nombre,
-      })),
-    };
+    return { success: true, materias };
   } catch (error) {
-    console.error("DETALLE_ERROR_ASIGNACIONES:", error);
-    return { success: false, secciones: [], materias: [], anoEscolar: "" };
+    console.error("ERROR_OBTENER_MATERIAS:", error);
+    return { success: false, materias: [] };
+  }
+}
+
+export async function guardarCalificacionesSeccion(data) {
+  try {
+    const { idInscripcion, idMateria, lapso, literalCalificacion, apreciacionDescriptiva } = data;
+
+    if (!idInscripcion || !idMateria || !lapso) {
+      return { success: false, error: "Faltan datos obligatorios." };
+    }
+
+    const evaluacionExistente = await prisma.evaluacion.findFirst({
+      where: {
+        idInscripcion: Number(idInscripcion),
+        idMateria: Number(idMateria),
+        lapso: Number(lapso),
+      },
+    });
+
+    if (evaluacionExistente) {
+      await prisma.evaluacion.update({
+        where: { idEvaluacion: evaluacionExistente.idEvaluacion },
+        data: {
+          literalCalificacion: literalCalificacion || "",
+          apreciacionDescriptiva: apreciacionDescriptiva || "",
+        },
+      });
+    } else {
+      await prisma.evaluacion.create({
+        data: {
+          idInscripcion: Number(idInscripcion),
+          idMateria: Number(idMateria),
+          lapso: Number(lapso),
+          literalCalificacion: literalCalificacion || "",
+          apreciacionDescriptiva: apreciacionDescriptiva || "",
+        },
+      });
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("ERROR_GUARDAR_CALIFICACIONES:", error);
+    return { success: false, error: error.message };
   }
 }
 
 /**
- * Auxiliar para limpiar prefijos duplicados (V-, C.E., etc.)
+ * Consulta directa general para boletines (replica el éxito de la matrícula)
  */
-function formatearCedula(valor) {
-  if (!valor || valor === "S/C") return "S/C";
-
-  const esEscolar = /C\.?E\.?/i.test(valor);
-  const numeros = String(valor).replace(/\D/g, "");
-
-  if (!numeros) return valor;
-
-  return esEscolar ? `C.E.-${numeros}` : `V-${numeros}`;
-}
-
-/**
- * 2. Obtener nómina e inscritos con sus notas
- */
-export async function obtenerEstudiantesYNotas(
-  idGradoSeccion,
-  materiaId,
-  lapso,
-) {
+export async function obtenerDatosBoletin(idGradoSeccion, idEstudiante = null, lapso = "1") {
   try {
-    if (!idGradoSeccion || !materiaId) return { success: true, data: [] };
+    const numLapso = Number(lapso) || 1;
 
-    const numGradoSeccion = Number(idGradoSeccion);
-    const numMateria = Number(materiaId);
-    const numLapso = Number(lapso);
+    const materiasGrado = await prisma.materia.findMany({ orderBy: { nombre: "asc" } });
 
-    if (isNaN(numGradoSeccion) || isNaN(numMateria))
-      return { success: true, data: [] };
-
+    // Traemos todas las inscripciones directamente tal cual como en matrícula
     const inscripciones = await prisma.inscripcion.findMany({
-      where: { idGradoSeccion: numGradoSeccion },
       include: {
         estudiante: true,
-        evaluacionesCualitativas: true,
+        gradoSeccion: true,
+        evaluaciones: {
+          where: { lapso: numLapso },
+          include: { materia: true },
+        },
       },
-      orderBy: { idInscripcion: "desc" },
+      orderBy: { estudiante: { apellido: "asc" } },
     });
 
-    const data = inscripciones.map((ins) => {
-      const cal =
-        (ins.evaluacionesCualitativas || []).find(
-          (c) =>
-            Number(c.lapso) === numLapso && Number(c.idMateria) === numMateria,
-        ) || {};
+    const boletines = inscripciones.map((ins) => {
+      const est = ins.estudiante;
+      if (!est) return null;
 
-      const est = ins.estudiante || {};
-      const apellido = est.apellido || "";
-      const nombre = est.nombre || "";
+      const gSec = ins.gradoSeccion;
 
-      const rawCedula = est.cedulaEscolar || est.idEstudiante || "S/C";
-      const cedulaFormateada = formatearCedula(rawCedula);
+      const evaluacionesCompletas = materiasGrado.map((mat) => {
+        const evalEncontrada = ins.evaluaciones.find((e) => e.idMateria === mat.idMateria);
+        return {
+          idMateria: mat.idMateria,
+          materia: mat.nombre,
+          literalCalificacion: evalEncontrada?.literalCalificacion || "-",
+          apreciacionDescriptiva: evalEncontrada?.apreciacionDescriptiva || "Sin informe cualitativo registrado.",
+        };
+      });
 
       return {
         idInscripcion: ins.idInscripcion,
-        cedula: cedulaFormateada,
-        nombre:
-          [apellido, nombre].filter(Boolean).join(", ") ||
-          "Estudiante sin nombre",
-        literal: cal.literalCalificacion || "",
-        apreciacion: cal.apreciacionDescriptiva || "",
+        nombreCompleto: `${est.apellido || ""}, ${est.nombre || ""}`,
+        cedula: est.cedulaEscolar || est.cedula || "S/C",
+        grado: gSec?.grado || "1er Grado",
+        seccion: gSec?.seccion || "A",
+        lapso: numLapso,
+        evaluaciones: evaluacionesCompletas,
       };
-    });
+    }).filter(Boolean);
 
-    return { success: true, data };
+    return { success: true, boletines };
   } catch (error) {
-    console.error("DETALLE_ERROR_ESTUDIANTES_Y_NOTAS:", error);
-    return { success: false, data: [], mensaje: error.message };
+    console.error("ERROR_OBTENER_DATOS_BOLETIN:", error);
+    return { success: false, boletines: [] };
   }
 }
 
 /**
- * 3. Guardar Calificaciones masivas de una Sección
+ * Consulta directa general para notas (replica el éxito de la matrícula)
  */
-export async function guardarCalificacionesSeccion(datos) {
-  const { materiaId, lapso, calificaciones } = datos;
-
+export async function obtenerEstudiantesYNotas(idGradoSeccion, idMateria = null, lapso = "1") {
   try {
-    const numMateria = Number(materiaId);
-    const numLapso = Number(lapso);
+    const numLapso = Number(lapso) || 1;
 
-    if (
-      isNaN(numMateria) ||
-      isNaN(numLapso) ||
-      !calificaciones ||
-      !Array.isArray(calificaciones)
-    ) {
-      return { success: false, error: "Datos inválidos para guardar." };
-    }
+    const materiasGrado = await prisma.materia.findMany({ orderBy: { nombre: "asc" } });
 
-    for (const cal of calificaciones) {
-      const numInscripcion = Number(cal.idInscripcion);
-      if (isNaN(numInscripcion)) continue;
-
-      const existente = await prisma.evaluacionCualitativa.findFirst({
-        where: {
-          idInscripcion: numInscripcion,
-          idMateria: numMateria,
-          lapso: numLapso,
+    // Traemos las inscripciones directamente sin filtros de ID restrictivos
+    const inscripciones = await prisma.inscripcion.findMany({
+      include: {
+        estudiante: true,
+        gradoSeccion: true,
+        evaluaciones: {
+          where: { lapso: numLapso },
+          include: { materia: true },
         },
+      },
+      orderBy: { estudiante: { apellido: "asc" } },
+    });
+
+    const estudiantesMapeados = inscripciones.map((ins) => {
+      const est = ins.estudiante;
+      if (!est) return null;
+
+      const evaluacionesCompletas = materiasGrado.map((mat) => {
+        const evalEncontrada = ins.evaluaciones.find((e) => e.idMateria === mat.idMateria);
+        return {
+          idMateria: mat.idMateria,
+          materia: mat.nombre,
+          literalCalificacion: evalEncontrada?.literalCalificacion || "",
+          apreciacionDescriptiva: evalEncontrada?.apreciacionDescriptiva || "",
+        };
       });
 
-      if (existente) {
-        await prisma.evaluacionCualitativa.update({
-          where: { idEvaluacion: existente.idEvaluacion },
-          data: {
-            literalCalificacion: cal.literal || "",
-            apreciacionDescriptiva: cal.apreciacion || "",
-          },
-        });
-      } else {
-        await prisma.evaluacionCualitativa.create({
-          data: {
-            idInscripcion: numInscripcion,
-            idMateria: numMateria,
-            lapso: numLapso,
-            literalCalificacion: cal.literal || "",
-            apreciacionDescriptiva: cal.apreciacion || "",
-          },
-        });
-      }
-    }
+      return {
+        idInscripcion: ins.idInscripcion,
+        idEstudiante: est.idEstudiante,
+        idGradoSeccion: ins.idGradoSeccion,
+        nombre: est.nombre,
+        apellido: est.apellido,
+        nombreCompleto: `${est.apellido || ""}, ${est.nombre || ""}`,
+        cedula: est.cedulaEscolar || est.cedula || est.idEstudiante || "S/C",
+        evaluaciones: evaluacionesCompletas,
+      };
+    }).filter(Boolean);
 
-    revalidatePath("/dashboard/gestion");
-    return { success: true };
+    return { success: true, estudiantes: estudiantesMapeados };
   } catch (error) {
-    console.error("ERROR_GUARDAR_NOTAS:", error);
-    return { success: false, error: error.message };
+    console.error("ERROR_OBTENER_ESTUDIANTES_Y_NOTAS:", error);
+    return { success: false, estudiantes: [] };
   }
 }

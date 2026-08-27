@@ -3,21 +3,20 @@
 import { prisma } from "@/lib/prisma";
 
 /**
- * 1. Obtener estado de avance de carga de notas
+ * 1. Obtener estado de avance de carga de notas (Corregido para validar por materias reales)
  */
 export async function obtenerEstatusCargaDocente(lapso = "1") {
   try {
     const numLapso = Number(lapso);
 
+    // 1. Traemos las secciones junto con sus inscripciones, las evaluaciones del lapso y las materias del grado
     const secciones = await prisma.gradoSeccion.findMany({
       include: {
         inscripciones: {
-          select: {
-            idInscripcion: true,
-            evaluacionesCualitativas: {
+          include: {
+            evaluaciones: {
               where: { lapso: numLapso },
-              select: { idEvaluacion: true },
-              take: 1,
+              select: { idMateria: true }, // Solo necesitamos saber qué materias ya tienen nota
             },
           },
         },
@@ -25,11 +24,28 @@ export async function obtenerEstatusCargaDocente(lapso = "1") {
       orderBy: [{ grado: "asc" }, { seccion: "asc" }],
     });
 
+    // 2. Traemos todas las materias para saber cuántas corresponden a cada grado exacto
+    const todasLasMaterias = await prisma.materia.findMany();
+
     const reporte = secciones.map((sec) => {
       const totalInscritos = sec.inscripciones.length;
-      const estudiantesConNotas = sec.inscripciones.filter(
-        (ins) => ins.evaluacionesCualitativas.length > 0,
+      
+      // Filtramos cuántas materias pertenecen específicamente al grado de esta sección
+      const materiasDelGradoCount = todasLasMaterias.filter(
+        (m) => m.grado === sec.grado
       ).length;
+
+      // Un estudiante se considera "con notas completas" si el número de evaluaciones 
+      // en ese lapso coincide con el total de materias que debe cursar su grado.
+      // (Si en tu colegio un docente integral sube una sola nota global, ajusta esta validación a > 0)
+      const estudiantesConNotas = sec.inscripciones.filter((ins) => {
+        if (materiasDelGradoCount === 0) {
+          // Fallback por si las materias no están asociadas por número de grado estricto
+          return ins.evaluaciones.length > 0;
+        }
+        // Valida que tenga notas en todas las materias del grado
+        return ins.evaluaciones.length >= materiasDelGradoCount;
+      }).length;
 
       const porcentaje =
         totalInscritos > 0
@@ -69,7 +85,7 @@ export async function obtenerBoletinesMasivosPorSeccion(
       include: {
         estudiante: true,
         gradoSeccion: true,
-        evaluacionesCualitativas: {
+        evaluaciones: {
           where: { lapso: numLapso },
           include: { materia: true },
         },
@@ -86,8 +102,8 @@ export async function obtenerBoletinesMasivosPorSeccion(
         estudiante: `${est.apellido}, ${est.nombre}`,
         cedula: est.cedulaEscolar || est.idEstudiante || "S/C",
         grado: `${sec.grado}° Grado - "${sec.seccion}"`,
-        evaluaciones: ins.evaluacionesCualitativas.map((e) => ({
-          materia: e.materia.nombre,
+        evaluaciones: ins.evaluaciones.map((e) => ({
+          materia: e.materia?.nombre || "Materia General",
           nota: e.literalCalificacion || "N/A",
           observacion:
             e.apreciacionDescriptiva || "Sin observación registrada.",
