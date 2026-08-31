@@ -1,136 +1,230 @@
 // app/dashboard/notas/page.jsx
-'use client'
+'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import Swal from 'sweetalert2';
+import {
+  obtenerAsignacionesDocente,
+  obtenerEstudiantesYNotas,
+  guardarEvaluacionIndividual,
+} from '../../../actions/gestionNotas'; // Ajusta la ruta según tu estructura de carpetas
 
 export default function AdministrarNotasPage() {
-  // --- FILTROS DE CONTROL ---
-  const [grado, setGrado] = useState('1er Grado');
-  const [seccion, setSeccion] = useState('A');
-  const [lapso, setLapso] = useState('1er Lapso');
-  const [materia, setMateria] = useState('Lengua y Comunicación');
+  // --- ESTADOS PARA FILTROS ---
+  const [secciones, setSecciones] = useState([]);
+  const [materias, setMaterias] = useState([]);
+  const [gradoSeccionId, setGradoSeccionId] = useState('');
+  const [materiaId, setMateriaId] = useState('');
+  const [lapso, setLapso] = useState('1');
 
-  // --- MOCK DE ESTUDIANTES REGISTRADOS (CON FILTROS ASOCIADOS) ---
-  const [estudiantes, setEstudiantes] = useState([
-    { id: 1, grado: '1er Grado', seccion: 'A', lapso: '1er Lapso', materia: 'Lengua y Comunicación', cedula: 'E-84123456', nombre: 'Carlos Eduardo', apellido: 'Mendoza Ruiz', nota: 'A', apreciacion: 'Demuestra excelente comprensión lectora y fluidez verbal.' },
-    { id: 2, grado: '1er Grado', seccion: 'A', lapso: '1er Lapso', materia: 'Lengua y Comunicación', cedula: 'E-84987654', nombre: 'María Valentina', apellido: 'Gómez Silva', nota: 'B', apreciacion: 'Buen trabajo en clase. Requiere repasar reglas ortográficas.' },
-    { id: 3, grado: '1er Grado', seccion: 'A', lapso: '1er Lapso', materia: 'Lengua y Comunicación', cedula: 'E-84223344', nombre: 'Simón Alejandro', apellido: 'Padrón Martínez', nota: 'A', apreciacion: 'Participativo, redacción clara y ordenada.' },
-    
-    // Alumnos para probar el filtrado con otras materias/secciones
-    { id: 4, grado: '1er Grado', seccion: 'A', lapso: '1er Lapso', materia: 'Matemáticas', cedula: 'E-84123456', nombre: 'Carlos Eduardo', apellido: 'Mendoza Ruiz', nota: 'B', apreciacion: 'Domina las operaciones básicas de adición y sustracción.' },
-    { id: 5, grado: '1er Grado', seccion: 'B', lapso: '1er Lapso', materia: 'Lengua y Comunicación', cedula: 'E-84556677', nombre: 'Andrés Ignacio', apellido: 'Rivas Pérez', nota: 'C', apreciacion: 'Consistente, requiere reforzar caligrafía.' },
-    { id: 6, grado: '2do Grado', seccion: 'A', lapso: '1er Lapso', materia: 'Lengua y Comunicación', cedula: 'E-84889900', nombre: 'Camila Isabel', apellido: 'Torres Blanco', nota: 'A', apreciacion: 'Rendimiento sobresaliente en todas las actividades.' },
-  ]);
+  // --- ESTADOS PARA DATOS Y UI ---
+  const [alumnos, setAlumnos] = useState([]);
+  const [cargando, setCargando] = useState(false);
+  const [guardando, setGuardando] = useState(false);
+  const [cargandoAsignaciones, setCargandoAsignaciones] = useState(true);
 
-  // --- Escala de calificaciones por letras ---
-  const opcionesLetras = ['A', 'B', 'C', 'D', 'E'];
+  // --- CARGAR ASIGNACIONES (SECCIONES Y MATERIAS) AL INICIO ---
+  useEffect(() => {
+    const cargarAsignaciones = async () => {
+      setCargandoAsignaciones(true);
+      const result = await obtenerAsignacionesDocente();
+      if (result.success) {
+        setSecciones(result.secciones);
+        setMaterias(result.materias);
+        if (result.secciones.length > 0) setGradoSeccionId(result.secciones[0].id);
+        if (result.materias.length > 0) setMateriaId(result.materias[0].id);
+      } else {
+        Swal.fire('Error', 'No se pudieron cargar las asignaciones', 'error');
+      }
+      setCargandoAsignaciones(false);
+    };
+    cargarAsignaciones();
+  }, []);
 
-  // --- FILTRADO DE ESTUDIANTES SEGÚN SELECCIÓN DE FILTROS ---
-  const estudiantesFiltrados = estudiantes.filter(
-    est => est.grado === grado && 
-           est.seccion === seccion && 
-           est.lapso === lapso && 
-           est.materia === materia
-  );
+  // --- CARGAR ALUMNOS Y SUS NOTAS CUANDO CAMBIAN FILTROS ---
+  useEffect(() => {
+    if (!gradoSeccionId || !materiaId) return;
+    const cargarAlumnos = async () => {
+      setCargando(true);
+      const result = await obtenerEstudiantesYNotas(gradoSeccionId, materiaId, lapso);
+      if (result.success) {
+        // Transformar al formato que espera la tabla
+        const alumnosFormateados = result.data.map((item) => ({
+          id: item.idInscripcion,
+          cedula: item.cedula,
+          nombre: item.nombre,
+          representante: item.representante || 'Sin representante',
+          nota: item.literal || '',
+          apreciacion: item.apreciacion || '',
+        }));
+        setAlumnos(alumnosFormateados);
+      } else {
+        Swal.fire('Error', 'No se pudieron cargar los estudiantes', 'error');
+        setAlumnos([]);
+      }
+      setCargando(false);
+    };
+    cargarAlumnos();
+  }, [gradoSeccionId, materiaId, lapso]);
 
-  // --- MANEJADORES DE NOTAS (UPDATE / EDIT) ---
+  // --- MANEJADORES DE CAMBIOS EN LA TABLA ---
   const handleNotaChange = (id, campo, valor) => {
-    setEstudiantes(prev => prev.map(est => est.id === id ? { ...est, [campo]: valor } : est));
+    // Actualizar estado local inmediatamente (optimista)
+    setAlumnos((prev) =>
+      prev.map((alumno) =>
+        alumno.id === id ? { ...alumno, [campo]: valor } : alumno
+      )
+    );
   };
 
-  // Restablecer / Limpiar evaluación de un alumno
-  const handleLimpiarNota = (id) => {
-    setEstudiantes(prev => prev.map(est => est.id === id ? { ...est, nota: '', apreciacion: '' } : est));
+  // --- GUARDAR CAMBIOS DE UN ALUMNO INDIVIDUAL (al perder foco o al guardar todo) ---
+  const guardarCambiosAlumno = async (alumno) => {
+    if (!alumno.nota) {
+      Swal.fire('Nota vacía', 'Debe seleccionar una calificación (A, B, C, D, E).', 'warning');
+      return;
+    }
+
+    setGuardando(true);
+    const payload = {
+      idInscripcion: alumno.id,
+      idMateria: materiaId,
+      lapso: lapso,
+      literal: alumno.nota,
+      apreciacion: alumno.apreciacion,
+    };
+    const result = await guardarEvaluacionIndividual(payload);
+    setGuardando(false);
+
+    if (!result.success) {
+      Swal.fire('Error', result.error || 'No se pudo guardar la evaluación', 'error');
+    }
   };
 
-  const handleGuardarNotas = () => {
-    alert(`[MOCK] Calificaciones guardadas exitosamente para ${grado} "${seccion}" - ${materia} (${lapso})`);
+  // --- GUARDAR TODAS LAS NOTAS (botón principal) ---
+  const handleGuardarTodas = async () => {
+    // Verificar que todos tengan nota asignada
+    const sinNota = alumnos.filter((a) => !a.nota);
+    if (sinNota.length > 0) {
+      Swal.fire(
+        'Faltan notas',
+        `Hay ${sinNota.length} alumnos sin calificación. ¿Desea continuar?`,
+        'warning'
+      );
+      // Podrías continuar o detenerte, aquí decidimos continuar
+    }
+
+    setGuardando(true);
+    let errores = 0;
+    for (const alumno of alumnos) {
+      if (!alumno.nota) continue; // saltar los que no tienen nota
+      const payload = {
+        idInscripcion: alumno.id,
+        idMateria: materiaId,
+        lapso: lapso,
+        literal: alumno.nota,
+        apreciacion: alumno.apreciacion,
+      };
+      const result = await guardarEvaluacionIndividual(payload);
+      if (!result.success) errores++;
+    }
+    setGuardando(false);
+
+    if (errores === 0) {
+      Swal.fire({
+        icon: 'success',
+        title: '¡Calificaciones guardadas!',
+        text: `Se actualizaron ${alumnos.filter(a => a.nota).length} alumnos.`,
+        timer: 2000,
+        showConfirmButton: false,
+      });
+    } else {
+      Swal.fire('Error', `Hubo ${errores} errores al guardar. Revise los datos.`, 'error');
+    }
   };
+
+  // --- OBTENER NOMBRE DE LA SECCIÓN SELECCIONADA ---
+  const seccionSeleccionada = secciones.find((s) => s.id === gradoSeccionId);
+  const nombreSeccion = seccionSeleccionada ? seccionSeleccionada.nombre : '';
+
+  // --- ESCALA DE CALIFICACIONES ---
+  const opcionesLetras = ['A', 'B', 'C', 'D', 'E'];
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
-      
       {/* Encabezado */}
       <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-xl font-bold text-slate-800">Carga y Control de Calificaciones</h1>
-          <p className="text-xs text-slate-500 mt-1">Asignación de calificación por letras (A–E) y apreciaciones cualitativas por sección.</p>
+          <p className="text-xs text-slate-500 mt-1">
+            Asignación de calificación por letras (A–E) y apreciaciones cualitativas por sección.
+          </p>
         </div>
-
-        <button 
-          onClick={handleGuardarNotas}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm py-2.5 px-5 rounded-lg transition-colors shadow-sm flex items-center gap-2 shrink-0"
+        <button
+          onClick={handleGuardarTodas}
+          disabled={guardando || cargando}
+          className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm py-2.5 px-5 rounded-lg transition-colors shadow-sm flex items-center gap-2 shrink-0 disabled:opacity-50"
         >
-          💾 Guardar Calificaciones
+          {guardando ? 'Guardando...' : '💾 Guardar Calificaciones'}
         </button>
       </div>
 
-      {/* Bar de Filtros: Grado, Sección, Lapso y Área de Aprendizaje */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Filtros (sección, materia, lapso) */}
+      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
-          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Grado</label>
-          <select 
-            value={grado}
-            onChange={(e) => setGrado(e.target.value)}
+          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Grado y Sección</label>
+          <select
+            value={gradoSeccionId}
+            onChange={(e) => setGradoSeccionId(e.target.value)}
             className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white font-medium focus:outline-none focus:border-indigo-500"
+            disabled={cargandoAsignaciones}
           >
-            <option value="1er Grado">1er Grado</option>
-            <option value="2do Grado">2do Grado</option>
-            <option value="3er Grado">3er Grado</option>
+            {secciones.map((sec) => (
+              <option key={sec.id} value={sec.id}>
+                {sec.nombre}
+              </option>
+            ))}
           </select>
         </div>
-
         <div>
-          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Sección</label>
-          <select 
-            value={seccion}
-            onChange={(e) => setSeccion(e.target.value)}
+          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Materia</label>
+          <select
+            value={materiaId}
+            onChange={(e) => setMateriaId(e.target.value)}
             className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white font-medium focus:outline-none focus:border-indigo-500"
+            disabled={cargandoAsignaciones}
           >
-            <option value="A">Sección "A"</option>
-            <option value="B">Sección "B"</option>
+            {materias.map((mat) => (
+              <option key={mat.id} value={mat.id}>
+                {mat.nombre}
+              </option>
+            ))}
           </select>
         </div>
-
         <div>
           <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Momento / Lapso</label>
-          <select 
+          <select
             value={lapso}
             onChange={(e) => setLapso(e.target.value)}
             className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white font-medium focus:outline-none focus:border-indigo-500"
           >
-            <option value="1er Lapso">1er Lapso</option>
-            <option value="2do Lapso">2do Lapso</option>
-            <option value="3er Lapso">3er Lapso</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Área / Materia</label>
-          <select 
-            value={materia}
-            onChange={(e) => setMateria(e.target.value)}
-            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white font-medium focus:outline-none focus:border-indigo-500"
-          >
-            <option value="Lengua y Comunicación">Lengua y Comunicación</option>
-            <option value="Matemáticas">Matemáticas</option>
-            <option value="Ciencias Naturales">Ciencias Naturales</option>
-            <option value="Ciencias Sociales">Ciencias Sociales</option>
+            <option value="1">1er Lapso</option>
+            <option value="2">2do Lapso</option>
+            <option value="3">3er Lapso</option>
           </select>
         </div>
       </div>
 
-      {/* Tabla Interactiva de Estudiantes */}
+      {/* Tabla de Estudiantes */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
           <div>
             <h2 className="text-sm font-bold text-slate-800">
-              {grado} "{seccion}" — {materia}
+              {nombreSeccion} — {materias.find(m => m.id === materiaId)?.nombre || ''}
             </h2>
-            <p className="text-xs text-slate-500">{lapso}</p>
+            <p className="text-xs text-slate-500">{`${lapso}er Lapso`}</p>
           </div>
           <span className="text-xs font-mono bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-md border border-indigo-100 font-semibold">
-            Matrícula: {estudiantesFiltrados.length} Alumnos
+            Matrícula: {alumnos.length} Alumnos
           </span>
         </div>
 
@@ -141,30 +235,39 @@ export default function AdministrarNotasPage() {
                 <th className="p-4">Estudiante</th>
                 <th className="p-4 text-center w-36">Calificación (A - E)</th>
                 <th className="p-4">Apreciación / Observación Pedagógica</th>
-                <th className="p-4 text-center w-16">Acción</th>
+                <th className="p-4 text-center w-20">Acción</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm">
-              {estudiantesFiltrados.length === 0 ? (
+              {cargando ? (
                 <tr>
                   <td colSpan="4" className="p-8 text-center text-slate-400 text-xs font-medium">
-                    No se encontraron estudiantes inscritos para {grado} "{seccion}" en {materia}.
+                    Cargando estudiantes...
+                  </td>
+                </tr>
+              ) : alumnos.length === 0 ? (
+                <tr>
+                  <td colSpan="4" className="p-8 text-center text-slate-400 text-xs font-medium">
+                    No se encontraron estudiantes inscritos para esta sección.
                   </td>
                 </tr>
               ) : (
-                estudiantesFiltrados.map((est) => (
-                  <tr key={est.id} className="hover:bg-slate-50/80 transition-colors">
-                    {/* Estudiante e Identificación (Inmodificables) */}
+                alumnos.map((alumno) => (
+                  <tr key={alumno.id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="p-4">
-                      <p className="font-semibold text-slate-800">{est.apellido}, {est.nombre}</p>
-                      <p className="text-xs font-mono text-slate-500">{est.cedula}</p>
+                      <p className="font-semibold text-slate-800">{alumno.nombre}</p>
+                      <p className="text-xs font-mono text-slate-500">{alumno.cedula}</p>
                     </td>
-                    
-                    {/* Selector de Nota por Letras */}
                     <td className="p-4 text-center">
-                      <select 
-                        value={est.nota}
-                        onChange={(e) => handleNotaChange(est.id, 'nota', e.target.value)}
+                      <select
+                        value={alumno.nota}
+                        onChange={(e) => {
+                          const nuevaNota = e.target.value;
+                          handleNotaChange(alumno.id, 'nota', nuevaNota);
+                          // Guardar automáticamente al cambiar la nota
+                          const alumnoActualizado = { ...alumno, nota: nuevaNota };
+                          guardarCambiosAlumno(alumnoActualizado);
+                        }}
                         className="w-full px-3 py-1.5 border rounded-lg font-bold text-center focus:outline-none focus:border-indigo-500 cursor-pointer bg-white text-slate-700 border-slate-300"
                       >
                         <option value="">Seleccionar</option>
@@ -175,22 +278,35 @@ export default function AdministrarNotasPage() {
                         ))}
                       </select>
                     </td>
-
-                    {/* Input de Apreciación */}
                     <td className="p-4">
-                      <input 
+                      <input
                         type="text"
-                        value={est.apreciacion}
-                        onChange={(e) => handleNotaChange(est.id, 'apreciacion', e.target.value)}
+                        value={alumno.apreciacion}
+                        onChange={(e) => {
+                          const nuevoTexto = e.target.value;
+                          handleNotaChange(alumno.id, 'apreciacion', nuevoTexto);
+                        }}
+                        onBlur={() => {
+                          // Guardar al perder el foco si tiene nota
+                          if (alumno.nota) {
+                            guardarCambiosAlumno(alumno);
+                          }
+                        }}
                         placeholder="Describa el rendimiento del alumno..."
                         className="w-full px-3 py-1.5 border border-slate-200 rounded-lg text-xs text-slate-700 focus:outline-none focus:border-indigo-500"
                       />
                     </td>
-
-                    {/* Acción: Limpiar campo */}
                     <td className="p-4 text-center">
                       <button
-                        onClick={() => handleLimpiarNota(est.id)}
+                        onClick={() => {
+                          // Limpiar nota y apreciación
+                          const alumnoLimpio = { ...alumno, nota: '', apreciacion: '' };
+                          handleNotaChange(alumno.id, 'nota', '');
+                          handleNotaChange(alumno.id, 'apreciacion', '');
+                          // Si queremos persistir el borrado, llamar a guardarCambiosAlumno con la nota vacía
+                          // Pero la acción requiere nota, así que podríamos no hacer nada o borrar en BD con una acción especial.
+                          // Por simplicidad, solo limpiamos el estado local.
+                        }}
                         className="text-slate-400 hover:text-rose-500 transition-colors text-xs p-1"
                         title="Limpiar nota y apreciación"
                       >
@@ -204,18 +320,17 @@ export default function AdministrarNotasPage() {
           </table>
         </div>
 
-        {/* Footer Informativo */}
         <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-between items-center text-xs text-slate-500">
           <span>* Los datos personales son gestionados por Secretaría. Modificaciones restringidas al docente.</span>
-          <button 
-            onClick={handleGuardarNotas}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-1.5 px-4 rounded-lg transition-colors"
+          <button
+            onClick={handleGuardarTodas}
+            disabled={guardando || cargando}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-1.5 px-4 rounded-lg transition-colors disabled:opacity-50"
           >
             Guardar Cambios
           </button>
         </div>
       </div>
-
     </div>
   );
 }
