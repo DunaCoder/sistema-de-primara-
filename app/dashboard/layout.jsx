@@ -31,6 +31,7 @@ export default function DashboardLayout({ children }) {
     { label: 'Inicio Dashboard', path: '/dashboard', icon: '🏠', roles: ['Admin', 'Secretaria', 'Docente'] },
     { label: 'Control de Estudios', path: '/dashboard/estudios', icon: '📂', roles: ['Admin'] },
     { label: 'Inscribir Alumno', path: '/dashboard/inscripciones', icon: '📝', roles: ['Secretaria'] },
+     { label: 'Reportes', path: '/dashboard/reportes', icon: '📝', roles: ['Secretaria'] },
     { label: 'Ver Matrícula', path: '/dashboard/alumnos', icon: '👥', roles: ['Secretaria'] },
     { label: 'Gestión de Estudiantes', path: '/dashboard/estudiantes/nuevo', icon: '👥', roles: ['Docente'] },
     { label: 'Gestión de Notas', path: '/dashboard/gestion', icon: '📝', roles: ['Docente'] },

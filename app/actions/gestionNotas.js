@@ -60,16 +60,20 @@ export async function obtenerAsignacionesDocente() {
 // ===== OBTENER ESTUDIANTES Y SUS NOTAS =====
 export async function obtenerEstudiantesYNotas(idGradoSeccion, materiaId, lapso) {
   try {
-    if (!idGradoSeccion || !materiaId) return { success: true, data: [] };
+    // Permitir que materiaId sea null (para reportes con todas las materias)
+    if (!idGradoSeccion) return { success: true, data: [] };
 
     const numGradoSeccion = Number(idGradoSeccion);
-    const numMateria = Number(materiaId);
     const numLapso = Number(lapso);
 
-    if (isNaN(numGradoSeccion) || isNaN(numMateria)) {
+    if (isNaN(numGradoSeccion)) {
       return { success: true, data: [] };
     }
 
+    // Si materiaId no es null, convertirlo a número; si es null, dejarlo como null
+    const numMateria = materiaId ? Number(materiaId) : null;
+
+    // Construir el include de evaluaciones con materia
     const inscripciones = await prisma.inscripcion.findMany({
       where: { idGradoSeccion: numGradoSeccion },
       include: {
@@ -78,16 +82,16 @@ export async function obtenerEstudiantesYNotas(idGradoSeccion, materiaId, lapso)
             representante: true,
           },
         },
-        evaluaciones: true,
+        evaluaciones: {
+          include: {
+            materia: true,  // Obtener el nombre de la materia
+          },
+        },
       },
       orderBy: { idInscripcion: 'desc' },
     });
 
     const data = inscripciones.map((ins) => {
-      const cal = (ins.evaluaciones || []).find(
-        (c) => Number(c.lapso) === numLapso && Number(c.idMateria) === numMateria
-      ) || {};
-
       const est = ins.alumno || {};
       const rep = est.representante || {};
       const nombreRepresentante = rep.nombre && rep.apellido
@@ -97,13 +101,38 @@ export async function obtenerEstudiantesYNotas(idGradoSeccion, materiaId, lapso)
       const rawCedula = est.cedulaEscolar || est.idAlumno || 'S/C';
       const cedulaFormateada = rawCedula;
 
+      // Obtener todas las evaluaciones del lapso (y filtrar por materia si se especificó)
+      let evaluacionesFiltradas = (ins.evaluaciones || [])
+        .filter((c) => Number(c.lapso) === numLapso);
+
+      // Si se especificó una materia, filtrar solo esa
+      if (numMateria !== null) {
+        evaluacionesFiltradas = evaluacionesFiltradas.filter(
+          (c) => Number(c.idMateria) === numMateria
+        );
+      }
+
+      // Mapear a un formato más claro para el frontend
+      const evaluacionesList = evaluacionesFiltradas.map((c) => ({
+        materia: c.materia?.nombre || 'Sin materia',
+        literalCalificacion: c.literalCalificacion || '',
+        apreciacionDescriptiva: c.apreciacionDescriptiva || '',
+      }));
+
+      // Para compatibilidad con la versión anterior (cuando hay materiaId)
+      // Buscar la primera evaluación (si existe) para los campos 'literal' y 'apreciacion'
+      const cal = evaluacionesFiltradas.length > 0 ? evaluacionesFiltradas[0] : {};
+
       return {
         idInscripcion: ins.idInscripcion,
         cedula: cedulaFormateada,
         nombre: [est.apellido, est.nombre].filter(Boolean).join(', ') || 'Estudiante sin nombre',
         representante: nombreRepresentante,
+        // Campos para compatibilidad (cuando se usa con una materia específica)
         literal: cal.literalCalificacion || '',
         apreciacion: cal.apreciacionDescriptiva || '',
+        // Nuevo campo con todas las evaluaciones del lapso (y materia si aplica)
+        evaluaciones: evaluacionesList,
       };
     });
 
@@ -157,5 +186,24 @@ export async function guardarEvaluacionIndividual({ idInscripcion, idMateria, la
   } catch (error) {
     console.error('ERROR_GUARDAR_EVALUACION_INDIVIDUAL:', error);
     return { success: false, error: error.message };
+  }
+}
+
+// ===== OBTENER SECIUONES =====
+// app/actions/gestionNotas.js
+export async function obtenerSeccionesDisponibles() {
+  try {
+    const secciones = await prisma.gradoSeccion.findMany({
+      select: {
+        idGradoSeccion: true,
+        grado: true,
+        seccion: true,
+      },
+      orderBy: [{ grado: 'asc' }, { seccion: 'asc' }],
+    });
+    return { success: true, secciones };
+  } catch (error) {
+    console.error('Error al obtener secciones:', error);
+    return { success: false, secciones: [] };
   }
 }
