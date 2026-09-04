@@ -19,14 +19,12 @@ async function main() {
   await prisma.evaluacionCualitativa.deleteMany();
   await prisma.asignacionDocente.deleteMany();
   await prisma.inscripcion.deleteMany();
-  await prisma.gradoMateria.deleteMany();
   await prisma.alumno.deleteMany();
   await prisma.representante.deleteMany();
   await prisma.gradoSeccion.deleteMany();
   await prisma.personal.deleteMany();
-  await prisma.materia.deleteMany();
   await prisma.usuario.deleteMany();
-  await prisma.rol.deleteMany(); // 👈 Limpiar roles también
+  await prisma.rol.deleteMany();
 
   // 2. Crear Roles
   console.log("🔑 Creando roles...");
@@ -42,7 +40,7 @@ async function main() {
     console.log(`  ✅ Rol: ${rol.nombre}`);
   }
 
-  // 3. Crear Usuarios con idRol
+  // 3. Crear Usuarios
   console.log("👥 Insertando usuarios...");
   const usuariosData = [
     { username: "admin", password: "admin123", idRol: rolesCreados["Admin"], estado: true },
@@ -57,7 +55,7 @@ async function main() {
     console.log(`  ✅ Usuario: ${user.username}`);
   }
 
-  // 4. Crear Personal (sin cargo, sin sueldoBase)
+  // 4. Crear Personal (sin materias ni asignaciones aún)
   console.log("💼 Insertando personal...");
   const personalData = [
     {
@@ -72,7 +70,7 @@ async function main() {
       nombre: "María",
       apellido: "Docente",
       fechaIngreso: new Date("2021-09-15"),
-      idUsuario: usuariosCreados["docente1"],
+      idUsuario: usuariosCreados["docente"], // Ahora usa el usuario "docente"
     },
   ];
 
@@ -81,21 +79,7 @@ async function main() {
     console.log(`  ✅ Personal: ${p.nombre} ${p.apellido}`);
   }
 
-  // 5. Crear Materias
-  console.log("📚 Insertando materias...");
-  const materias = [
-    { nombre: "Matemáticas", descripcion: "Aritmética y geometría" },
-    { nombre: "Lengua", descripcion: "Lectura y escritura" },
-    { nombre: "Ciencias", descripcion: "Ciencias naturales" },
-  ];
-  const materiasCreadas = [];
-  for (const m of materias) {
-    const materia = await prisma.materia.create({ data: m });
-    materiasCreadas.push(materia);
-    console.log(`  ✅ Materia: ${materia.nombre}`);
-  }
-
-  // 6. Crear GradoSeccion
+  // 5. Crear GradoSeccion
   console.log("🏫 Creando grado y sección...");
   const gradoSeccion = await prisma.gradoSeccion.create({
     data: {
@@ -106,32 +90,17 @@ async function main() {
   });
   console.log(`  ✅ GradoSeccion: ${gradoSeccion.grado} ${gradoSeccion.seccion}`);
 
-  // 7. Malla curricular (GradoMateria)
-  console.log("📋 Asignando materias al grado...");
-  for (const materia of materiasCreadas) {
-    await prisma.gradoMateria.create({
-      data: {
-        grado: gradoSeccion.grado,
-        idMateria: materia.idMateria,
-      },
-    });
-    console.log(`  ✅ Materia ${materia.nombre} asignada al grado`);
-  }
+  // 6. Asignar docente a la sección (AsignacionDocente) - SIN MATERIAS
+  console.log("👨‍🏫 Asignando docente a la sección...");
+  await prisma.asignacionDocente.create({
+    data: {
+      idDocente: "V-00000002",
+      idGradoSeccion: gradoSeccion.idGradoSeccion,
+    },
+  });
+  console.log(`  ✅ Docente asignado a la sección`);
 
-  // 8. Asignar docente a materia (AsignacionDocente)
-  console.log("👨‍🏫 Asignando docente a materias...");
-  for (const materia of materiasCreadas) {
-    await prisma.asignacionDocente.create({
-      data: {
-        idDocente: "V-00000002",
-        idGradoSeccion: gradoSeccion.idGradoSeccion,
-        idMateria: materia.idMateria,
-      },
-    });
-    console.log(`  ✅ Docente asignado a ${materia.nombre}`);
-  }
-
-  // 9. Crear Representante y Alumno
+  // 7. Crear Representante y Alumno
   console.log("👨‍👦 Registrando representante y alumno...");
   const representante = await prisma.representante.create({
     data: {
@@ -154,7 +123,7 @@ async function main() {
   });
   console.log(`  ✅ Alumno: ${alumno.nombre} ${alumno.apellido}`);
 
-  // 10. Inscribir alumno
+  // 8. Inscribir alumno
   console.log("📝 Inscribiendo alumno...");
   const inscripcion = await prisma.inscripcion.create({
     data: {
@@ -166,21 +135,20 @@ async function main() {
   });
   console.log(`  ✅ Inscripción creada`);
 
-  // 11. Evaluaciones cualitativas (ejemplo)
-  console.log("📊 Creando evaluaciones de prueba...");
-  for (const materia of materiasCreadas) {
-    for (let lapso = 1; lapso <= 3; lapso++) {
-      await prisma.evaluacionCualitativa.create({
-        data: {
-          idInscripcion: inscripcion.idInscripcion,
-          idMateria: materia.idMateria,
-          lapso: lapso,
-          literalCalificacion: ["A", "B", "A"][lapso - 1],
-          apreciacionDescriptiva: `Desempeño ${["Excelente", "Bueno", "Excelente"][lapso - 1]}`,
-        },
-      });
-    }
-    console.log(`  ✅ Evaluaciones para ${materia.nombre}`);
+  // 9. Evaluaciones cualitativas (sin materias, una por lapso)
+  console.log("📊 Creando evaluaciones de prueba (sin materias)...");
+  const literales = ["A", "B", "A"];
+  const apreciaciones = ["Excelente", "Bueno", "Excelente"];
+  for (let lapso = 1; lapso <= 3; lapso++) {
+    await prisma.evaluacionCualitativa.create({
+      data: {
+        idInscripcion: inscripcion.idInscripcion,
+        lapso: lapso,
+        literalCalificacion: literales[lapso - 1],
+        apreciacionDescriptiva: `Desempeño ${apreciaciones[lapso - 1]}`,
+      },
+    });
+    console.log(`  ✅ Evaluación lapso ${lapso}`);
   }
 
   console.log("✅ ¡Siembra completada con éxito!");

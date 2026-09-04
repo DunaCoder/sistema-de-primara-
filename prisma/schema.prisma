@@ -17,58 +17,50 @@ model Usuario {
   password  String
   estado    Boolean @default(true)
 
-  // Relación con Rol
   idRol     Int     @map("id_rol")
   rol       Rol     @relation(fields: [idRol], references: [idRol], onDelete: Restrict)
 
-  personal  Personal? // 1:1 opcional
+  personal  Personal?
 
   @@map("usuarios")
 }
 
 model Personal {
-  idPersonal   String   @id @map("id_personal") // Cédula/DNI
+  idPersonal   String   @id @map("id_personal")
   nombre       String
   apellido     String
   fechaIngreso DateTime @map("fecha_ingreso") @db.Date
-  idUsuario    Int?     @unique @map("id_usuario") // FK a Usuario (opcional)
+  idUsuario    Int?     @unique @map("id_usuario")
 
-  // Relación 1:1 con Usuario (opcional)
   usuario  Usuario? @relation(fields: [idUsuario], references: [idUsuario], onDelete: SetNull)
 
-  // Relación 1:N con GradoSeccion (docente guía de varias secciones)
   gradosSecciones GradoSeccion[]
-
-  // Relación 1:N con AsignacionDocente (docente puede tener varias asignaciones)
   asignaciones    AsignacionDocente[]
 
   @@map("personal")
 }
 
 model Representante {
-  idRepresentante String   @id @map("id_representante") // Cédula/DNI
+  idRepresentante String   @id @map("id_representante")
   nombre          String
   apellido        String
   telefono        String
   direccion       String   @db.Text
 
-  // Relación 1:N con Alumno (un representante tiene varios hijos)
   alumnos         Alumno[]
 
   @@map("representantes")
 }
 
 model Alumno {
-  idAlumno        String   @id @map("id_alumno") // ID interno o cédula escolar
+  idAlumno        String   @id @map("id_alumno")
   nombre          String
   apellido        String
   fechaNacimiento DateTime @map("fecha_nacimiento") @db.Date
-  idRepresentante String   @map("id_representante") // FK a Representante
+  idRepresentante String   @map("id_representante")
 
-  // Relación N:1 con Representante (cada alumno tiene un representante)
   representante Representante @relation(fields: [idRepresentante], references: [idRepresentante], onDelete: Restrict)
 
-  // Relación 1:N con Inscripcion (un alumno puede inscribirse varias veces)
   inscripciones Inscripcion[]
 
   @@map("alumnos")
@@ -76,56 +68,21 @@ model Alumno {
 
 model GradoSeccion {
   idGradoSeccion Int    @id @default(autoincrement()) @map("id_grado_seccion")
-  grado          String // Ej: "1er Grado"
-  seccion        String // Ej: "A"
-  idDocenteGuia  String @map("id_docente_guia") // FK a Personal (docente guía)
+  grado          String
+  seccion        String
+  idDocenteGuia  String @map("id_docente_guia")
 
-  // Relación N:1 con Personal (docente guía)
   docenteGuia Personal @relation(fields: [idDocenteGuia], references: [idPersonal], onDelete: Restrict)
 
-  // Relación 1:N con Inscripcion (una sección tiene muchos alumnos inscritos)
   inscripciones Inscripcion[]
-
-  // Relación 1:N con AsignacionDocente (una sección tiene varias asignaciones de materias)
   asignaciones  AsignacionDocente[]
 
   @@map("grados_secciones")
 }
 
 // ==========================================
-// 2. TABLAS DE MATERIAS Y ASIGNACIONES
+// 2. ASIGNACIONES DOCENTES
 // ==========================================
-
-model Materia {
-  idMateria   Int     @id @default(autoincrement())
-  nombre      String
-  descripcion String?
-
-  // Relación 1:N con GradoMateria (una materia puede estar en varios grados)
-  grados      GradoMateria[]
-
-  // Relación 1:N con AsignacionDocente (una materia puede ser asignada a varios docentes)
-  asignaciones AsignacionDocente[]
-
-  // Relación 1:N con EvaluacionCualitativa (una materia tiene muchas evaluaciones)
-  evaluaciones EvaluacionCualitativa[]
-
-  @@map("materias")
-}
-
-// Malla curricular: qué materias se imparten en cada grado
-model GradoMateria {
-  idGradoMateria Int @id @default(autoincrement())
-  grado          String // Debe coincidir con GradoSeccion.grado
-  idMateria      Int   // FK a Materia
-
-  // Relación N:1 con Materia
-  materia Materia @relation(fields: [idMateria], references: [idMateria], onDelete: Cascade)
-
-  // Unicidad: no repetir la misma materia en el mismo grado
-  @@unique([grado, idMateria])
-  @@map("grados_materias")
-}
 
 model Rol {
   idRol   Int      @id @default(autoincrement())
@@ -135,20 +92,17 @@ model Rol {
   @@map("roles")
 }
 
-// Asignación de un docente a una materia en una sección específica
+// Asignación de un docente a una sección (sin materia)
 model AsignacionDocente {
   idAsignacion   Int @id @default(autoincrement())
-  idDocente      String // FK a Personal
-  idGradoSeccion Int   // FK a GradoSeccion
-  idMateria      Int   // FK a Materia
+  idDocente      String
+  idGradoSeccion Int
 
-  // Relaciones N:1
-  docente      Personal      @relation(fields: [idDocente], references: [idPersonal], onDelete: Cascade)
-  gradoSeccion GradoSeccion  @relation(fields: [idGradoSeccion], references: [idGradoSeccion], onDelete: Cascade)
-  materia      Materia       @relation(fields: [idMateria], references: [idMateria], onDelete: Cascade)
+  docente      Personal     @relation(fields: [idDocente], references: [idPersonal], onDelete: Cascade)
+  gradoSeccion GradoSeccion @relation(fields: [idGradoSeccion], references: [idGradoSeccion], onDelete: Cascade)
 
-  // Unicidad: evitar duplicados (mismo docente, misma sección, misma materia)
-  @@unique([idDocente, idGradoSeccion, idMateria])
+  // Unicidad: evitar duplicados (mismo docente, misma sección)
+  @@unique([idDocente, idGradoSeccion])
   @@map("asignaciones_docentes")
 }
 
@@ -158,16 +112,14 @@ model AsignacionDocente {
 
 model Inscripcion {
   idInscripcion    Int      @id @default(autoincrement()) @map("id_inscripcion")
-  idAlumno         String   @map("id_alumno") // FK a Alumno
-  idGradoSeccion   Int      @map("id_grado_seccion") // FK a GradoSeccion
-  añoEscolar       String   @map("año_escolar") // Ej: "2025-2026"
+  idAlumno         String   @map("id_alumno")
+  idGradoSeccion   Int      @map("id_grado_seccion")
+  añoEscolar       String   @map("año_escolar")
   fechaInscripcion DateTime @default(now()) @map("fecha_inscripcion") @db.Date
 
-  // Relaciones N:1
   alumno      Alumno      @relation(fields: [idAlumno], references: [idAlumno], onDelete: Cascade)
   gradoSeccion GradoSeccion @relation(fields: [idGradoSeccion], references: [idGradoSeccion], onDelete: Restrict)
 
-  // Relación 1:N con EvaluacionCualitativa (una inscripción tiene varias notas)
   evaluaciones EvaluacionCualitativa[]
 
   @@map("inscripciones")
@@ -175,17 +127,14 @@ model Inscripcion {
 
 model EvaluacionCualitativa {
   idEvaluacion          Int      @id @default(autoincrement()) @map("id_evaluacion")
-  idInscripcion         Int      @map("id_inscripcion") // FK a Inscripcion
-  idMateria             Int      @map("id_materia") // FK a Materia (NUEVO)
+  idInscripcion         Int      @map("id_inscripcion")
   lapso                 Int      // 1, 2, 3
-  literalCalificacion   String   @map("literal_calificacion") // A, B, C, D, E
-  apreciacionDescriptiva String? @db.Text @map("apreciacion_descriptiva") // opcional
+  literalCalificacion   String   @map("literal_calificacion")
+  apreciacionDescriptiva String? @db.Text @map("apreciacion_descriptiva")
 
-  // Relaciones N:1
   inscripcion Inscripcion @relation(fields: [idInscripcion], references: [idInscripcion], onDelete: Cascade)
-  materia     Materia     @relation(fields: [idMateria], references: [idMateria], onDelete: Cascade)
 
-  // Unicidad: una sola nota por inscripción, materia y lapso
-  @@unique([idInscripcion, lapso, idMateria])
+  // Unicidad: una sola nota por inscripción y lapso
+  @@unique([idInscripcion, lapso])
   @@map("evaluaciones_cualitativas")
 }
