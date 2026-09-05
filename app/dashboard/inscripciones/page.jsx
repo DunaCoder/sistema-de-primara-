@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -24,7 +24,9 @@ const ALUMNO_TEMPLATE = {
   nombreAlu: '',
   apellidoAlu: '',
   fechaNacimiento: '',
-  idGradoSeccion: '1'
+  idGradoSeccion: '1',
+  discapacidad: '',   // <-- NUEVO
+  alergias: ''        // <-- NUEVO
 };
 
 export default function InscripcionesPage() {
@@ -486,6 +488,33 @@ export default function InscripcionesPage() {
                   >
                     <option value="1">1er Grado - Sección A</option>
                   </select>
+                </div>
+
+                {/* NUEVOS CAMPOS: DISCAPACIDAD Y ALERGIAS */}
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">
+                    Discapacidad / Condición Especial
+                  </label>
+                  <input 
+                    type="text" 
+                    value={alu.discapacidad || ''} 
+                    onChange={(e) => handleAlumnoChange(index, 'discapacidad', e.target.value)} 
+                    placeholder="Ej: Ninguna, Motriz, Visual, Auditiva, etc."
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500 text-slate-800"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">
+                    Alergias / Condiciones Médicas
+                  </label>
+                  <input 
+                    type="text" 
+                    value={alu.alergias || ''} 
+                    onChange={(e) => handleAlumnoChange(index, 'alergias', e.target.value)} 
+                    placeholder="Ej: Penicilina, Polen, Asma, etc."
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:border-indigo-500 text-slate-800"
+                  />
                 </div>
               </div>
             </div>

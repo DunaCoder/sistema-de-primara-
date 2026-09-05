@@ -20,6 +20,7 @@ async function main() {
   await prisma.asignacionDocente.deleteMany();
   await prisma.inscripcion.deleteMany();
   await prisma.alumno.deleteMany();
+  await prisma.telefonoRepresentante.deleteMany(); // nueva
   await prisma.representante.deleteMany();
   await prisma.gradoSeccion.deleteMany();
   await prisma.personal.deleteMany();
@@ -55,7 +56,7 @@ async function main() {
     console.log(`  ✅ Usuario: ${user.username}`);
   }
 
-  // 4. Crear Personal (sin materias ni asignaciones aún)
+  // 4. Crear Personal (ahora con teléfono y correo)
   console.log("💼 Insertando personal...");
   const personalData = [
     {
@@ -64,13 +65,17 @@ async function main() {
       apellido: "Sistema",
       fechaIngreso: new Date("2020-01-01"),
       idUsuario: usuariosCreados["admin"],
+      telefono: "0412-1111111",
+      correo: "admin@sistema.com",
     },
     {
       idPersonal: "V-00000002",
       nombre: "María",
       apellido: "Docente",
       fechaIngreso: new Date("2021-09-15"),
-      idUsuario: usuariosCreados["docente"], // Ahora usa el usuario "docente"
+      idUsuario: usuariosCreados["docente"],
+      telefono: "0412-2222222",
+      correo: "maria.docente@colegio.com",
     },
   ];
 
@@ -85,12 +90,12 @@ async function main() {
     data: {
       grado: "1er Grado",
       seccion: "A",
-      idDocenteGuia: "V-00000002", // Docente guía
+      idDocenteGuia: "V-00000002",
     },
   });
   console.log(`  ✅ GradoSeccion: ${gradoSeccion.grado} ${gradoSeccion.seccion}`);
 
-  // 6. Asignar docente a la sección (AsignacionDocente) - SIN MATERIAS
+  // 6. Asignar docente a la sección
   console.log("👨‍🏫 Asignando docente a la sección...");
   await prisma.asignacionDocente.create({
     data: {
@@ -100,18 +105,39 @@ async function main() {
   });
   console.log(`  ✅ Docente asignado a la sección`);
 
-  // 7. Crear Representante y Alumno
-  console.log("👨‍👦 Registrando representante y alumno...");
+  // 7. Crear Representante (sin teléfono aquí, lo añadimos aparte)
+  console.log("👨‍👦 Registrando representante...");
   const representante = await prisma.representante.create({
     data: {
       idRepresentante: "V-99999999",
       nombre: "Test",
       apellido: "Representante",
-      telefono: "0412-0000000",
       direccion: "Caracas, Distrito Capital",
     },
   });
+  console.log(`  ✅ Representante: ${representante.nombre} ${representante.apellido}`);
 
+  // 8. Agregar teléfonos al representante
+  console.log("📱 Agregando teléfonos al representante...");
+  const telefonos = [
+    { numero: "0412-3333333", tipo: "Móvil", esPrincipal: true },
+    { numero: "0212-4444444", tipo: "Casa", esPrincipal: false },
+    { numero: "0416-5555555", tipo: "Emergencia", esPrincipal: false },
+  ];
+  for (const t of telefonos) {
+    await prisma.telefonoRepresentante.create({
+      data: {
+        idRepresentante: representante.idRepresentante,
+        numero: t.numero,
+        tipo: t.tipo,
+        esPrincipal: t.esPrincipal,
+      },
+    });
+    console.log(`  ✅ Teléfono ${t.numero} (${t.tipo})`);
+  }
+
+  // 9. Crear Alumno (con discapacidad y alergias)
+  console.log("👦 Registrando alumno...");
   const alumno = await prisma.alumno.create({
     data: {
       idAlumno: "E-TEST2026",
@@ -119,24 +145,26 @@ async function main() {
       apellido: "Alumno",
       fechaNacimiento: new Date("2020-06-15"),
       idRepresentante: representante.idRepresentante,
+      discapacidad: "Ninguna",
+      alergias: "Polen, Penicilina",
     },
   });
   console.log(`  ✅ Alumno: ${alumno.nombre} ${alumno.apellido}`);
 
-  // 8. Inscribir alumno
+  // 10. Inscribir alumno (usando anioEscolar)
   console.log("📝 Inscribiendo alumno...");
   const inscripcion = await prisma.inscripcion.create({
     data: {
       idAlumno: alumno.idAlumno,
       idGradoSeccion: gradoSeccion.idGradoSeccion,
-      añoEscolar: "2025-2026",
+      anioEscolar: "2025-2026", // antes era añoEscolar
       fechaInscripcion: new Date(),
     },
   });
   console.log(`  ✅ Inscripción creada`);
 
-  // 9. Evaluaciones cualitativas (sin materias, una por lapso)
-  console.log("📊 Creando evaluaciones de prueba (sin materias)...");
+  // 11. Evaluaciones cualitativas (sin materias)
+  console.log("📊 Creando evaluaciones de prueba...");
   const literales = ["A", "B", "A"];
   const apreciaciones = ["Excelente", "Bueno", "Excelente"];
   for (let lapso = 1; lapso <= 3; lapso++) {

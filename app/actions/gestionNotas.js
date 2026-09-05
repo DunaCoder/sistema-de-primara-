@@ -13,7 +13,7 @@ const pool = new Pool({
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
-// ===== OBTENER ASIGNACIONES DEL DOCENTE (secciones y materias) =====
+// ===== OBTENER ASIGNACIONES DEL DOCENTE (SOLO SECCIONES) =====
 export async function obtenerAsignacionesDocente() {
   try {
     const secciones = await prisma.gradoSeccion.findMany({
@@ -23,14 +23,6 @@ export async function obtenerAsignacionesDocente() {
         seccion: true,
       },
       orderBy: [{ grado: 'asc' }, { seccion: 'asc' }],
-    });
-
-    const materias = await prisma.materia.findMany({
-      select: {
-        idMateria: true,
-        nombre: true,
-      },
-      orderBy: { nombre: 'asc' },
     });
 
     const fechaActual = new Date();
@@ -46,10 +38,7 @@ export async function obtenerAsignacionesDocente() {
         id: String(s.idGradoSeccion),
         nombre: `${s.grado}° Grado - Sección "${s.seccion}"`,
       })),
-      materias: materias.map((m) => ({
-        id: String(m.idMateria),
-        nombre: m.nombre,
-      })),
+      materias: [], // <-- Vacío, porque ya no hay materias
     };
   } catch (error) {
     console.error('DETALLE_ERROR_ASIGNACIONES:', error);
@@ -57,10 +46,9 @@ export async function obtenerAsignacionesDocente() {
   }
 }
 
-// ===== OBTENER ESTUDIANTES Y SUS NOTAS =====
-export async function obtenerEstudiantesYNotas(idGradoSeccion, materiaId, lapso) {
+// ===== OBTENER ESTUDIANTES Y SUS NOTAS (SIN MATERIAS) =====
+export async function obtenerEstudiantesYNotas(idGradoSeccion, materiaId = null, lapso) {
   try {
-    // Permitir que materiaId sea null (para reportes con todas las materias)
     if (!idGradoSeccion) return { success: true, data: [] };
 
     const numGradoSeccion = Number(idGradoSeccion);
@@ -70,23 +58,21 @@ export async function obtenerEstudiantesYNotas(idGradoSeccion, materiaId, lapso)
       return { success: true, data: [] };
     }
 
-    // Si materiaId no es null, convertirlo a número; si es null, dejarlo como null
-    const numMateria = materiaId ? Number(materiaId) : null;
+    // Ignoramos materiaId porque ya no existe (pero lo aceptamos por compatibilidad)
 
-    // Construir el include de evaluaciones con materia
     const inscripciones = await prisma.inscripcion.findMany({
       where: { idGradoSeccion: numGradoSeccion },
       include: {
         alumno: {
           include: {
-            representante: true,
+            representante: {
+              include: {
+                telefonos: true,
+              },
+            },
           },
         },
-        evaluaciones: {
-          include: {
-            materia: true,  // Obtener el nombre de la materia
-          },
-        },
+        evaluaciones: true,
       },
       orderBy: { idInscripcion: 'desc' },
     });
@@ -94,33 +80,20 @@ export async function obtenerEstudiantesYNotas(idGradoSeccion, materiaId, lapso)
     const data = inscripciones.map((ins) => {
       const est = ins.alumno || {};
       const rep = est.representante || {};
+
+      const telefonoPrincipal = rep.telefonos?.find(t => t.esPrincipal)?.numero
+        || rep.telefonos?.[0]?.numero
+        || '';
+
       const nombreRepresentante = rep.nombre && rep.apellido
-        ? `${rep.nombre} ${rep.apellido}`
+        ? `${rep.nombre} ${rep.apellido} (${telefonoPrincipal})`
         : 'Sin representante';
 
-      const rawCedula = est.cedulaEscolar || est.idAlumno || 'S/C';
-      const cedulaFormateada = rawCedula;
+      const cedulaFormateada = est.idAlumno || 'S/C';
 
-      // Obtener todas las evaluaciones del lapso (y filtrar por materia si se especificó)
-      let evaluacionesFiltradas = (ins.evaluaciones || [])
+      const evaluacionesFiltradas = (ins.evaluaciones || [])
         .filter((c) => Number(c.lapso) === numLapso);
 
-      // Si se especificó una materia, filtrar solo esa
-      if (numMateria !== null) {
-        evaluacionesFiltradas = evaluacionesFiltradas.filter(
-          (c) => Number(c.idMateria) === numMateria
-        );
-      }
-
-      // Mapear a un formato más claro para el frontend
-      const evaluacionesList = evaluacionesFiltradas.map((c) => ({
-        materia: c.materia?.nombre || 'Sin materia',
-        literalCalificacion: c.literalCalificacion || '',
-        apreciacionDescriptiva: c.apreciacionDescriptiva || '',
-      }));
-
-      // Para compatibilidad con la versión anterior (cuando hay materiaId)
-      // Buscar la primera evaluación (si existe) para los campos 'literal' y 'apreciacion'
       const cal = evaluacionesFiltradas.length > 0 ? evaluacionesFiltradas[0] : {};
 
       return {
@@ -128,11 +101,10 @@ export async function obtenerEstudiantesYNotas(idGradoSeccion, materiaId, lapso)
         cedula: cedulaFormateada,
         nombre: [est.apellido, est.nombre].filter(Boolean).join(', ') || 'Estudiante sin nombre',
         representante: nombreRepresentante,
-        // Campos para compatibilidad (cuando se usa con una materia específica)
         literal: cal.literalCalificacion || '',
         apreciacion: cal.apreciacionDescriptiva || '',
-        // Nuevo campo con todas las evaluaciones del lapso (y materia si aplica)
-        evaluaciones: evaluacionesList,
+        discapacidad: est.discapacidad || '',
+        alergias: est.alergias || '',
       };
     });
 
@@ -143,20 +115,18 @@ export async function obtenerEstudiantesYNotas(idGradoSeccion, materiaId, lapso)
   }
 }
 
-// ===== GUARDAR EVALUACIÓN INDIVIDUAL =====
-export async function guardarEvaluacionIndividual({ idInscripcion, idMateria, lapso, literal, apreciacion }) {
+// ===== GUARDAR EVALUACIÓN INDIVIDUAL (SIN MATERIA) =====
+export async function guardarEvaluacionIndividual({ idInscripcion, lapso, literal, apreciacion, idMateria = null }) {
   try {
     const numInscripcion = Number(idInscripcion);
-    const numMateria = Number(idMateria);
     const numLapso = Number(lapso);
-    if (isNaN(numInscripcion) || isNaN(numMateria) || isNaN(numLapso)) {
+    if (isNaN(numInscripcion) || isNaN(numLapso)) {
       return { success: false, error: 'Datos inválidos' };
     }
 
     const existente = await prisma.evaluacionCualitativa.findFirst({
       where: {
         idInscripcion: numInscripcion,
-        idMateria: numMateria,
         lapso: numLapso,
       },
     });
@@ -173,7 +143,6 @@ export async function guardarEvaluacionIndividual({ idInscripcion, idMateria, la
       await prisma.evaluacionCualitativa.create({
         data: {
           idInscripcion: numInscripcion,
-          idMateria: numMateria,
           lapso: numLapso,
           literalCalificacion: literal,
           apreciacionDescriptiva: apreciacion,
@@ -189,8 +158,7 @@ export async function guardarEvaluacionIndividual({ idInscripcion, idMateria, la
   }
 }
 
-// ===== OBTENER SECIUONES =====
-// app/actions/gestionNotas.js
+// ===== OBTENER SECCIONES =====
 export async function obtenerSeccionesDisponibles() {
   try {
     const secciones = await prisma.gradoSeccion.findMany({

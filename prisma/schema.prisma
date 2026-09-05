@@ -32,7 +32,10 @@ model Personal {
   fechaIngreso DateTime @map("fecha_ingreso") @db.Date
   idUsuario    Int?     @unique @map("id_usuario")
 
-  usuario  Usuario? @relation(fields: [idUsuario], references: [idUsuario], onDelete: SetNull)
+  telefono     String?  @map("telefono")
+  correo       String?  @map("correo")
+
+  usuario      Usuario? @relation(fields: [idUsuario], references: [idUsuario], onDelete: SetNull)
 
   gradosSecciones GradoSeccion[]
   asignaciones    AsignacionDocente[]
@@ -44,12 +47,24 @@ model Representante {
   idRepresentante String   @id @map("id_representante")
   nombre          String
   apellido        String
-  telefono        String
   direccion       String   @db.Text
 
   alumnos         Alumno[]
+  telefonos       TelefonoRepresentante[]
 
   @@map("representantes")
+}
+
+model TelefonoRepresentante {
+  idTelefono      Int      @id @default(autoincrement()) @map("id_telefono")
+  idRepresentante String   @map("id_representante")
+  numero          String
+  tipo            String?  // Opcional: Casa, Trabajo, Móvil, Emergencia
+  esPrincipal     Boolean  @default(false)
+
+  representante   Representante @relation(fields: [idRepresentante], references: [idRepresentante], onDelete: Cascade)
+
+  @@map("telefonos_representantes")
 }
 
 model Alumno {
@@ -59,9 +74,12 @@ model Alumno {
   fechaNacimiento DateTime @map("fecha_nacimiento") @db.Date
   idRepresentante String   @map("id_representante")
 
-  representante Representante @relation(fields: [idRepresentante], references: [idRepresentante], onDelete: Restrict)
+  discapacidad    String?  @map("discapacidad")
+  alergias        String?  @map("alergias")
 
-  inscripciones Inscripcion[]
+  representante   Representante @relation(fields: [idRepresentante], references: [idRepresentante], onDelete: Restrict)
+
+  inscripciones   Inscripcion[]
 
   @@map("alumnos")
 }
@@ -72,10 +90,10 @@ model GradoSeccion {
   seccion        String
   idDocenteGuia  String @map("id_docente_guia")
 
-  docenteGuia Personal @relation(fields: [idDocenteGuia], references: [idPersonal], onDelete: Restrict)
+  docenteGuia    Personal @relation(fields: [idDocenteGuia], references: [idPersonal], onDelete: Restrict)
 
-  inscripciones Inscripcion[]
-  asignaciones  AsignacionDocente[]
+  inscripciones  Inscripcion[]
+  asignaciones   AsignacionDocente[]
 
   @@map("grados_secciones")
 }
@@ -85,14 +103,13 @@ model GradoSeccion {
 // ==========================================
 
 model Rol {
-  idRol   Int      @id @default(autoincrement())
-  nombre  String   @unique
+  idRol    Int      @id @default(autoincrement())
+  nombre   String   @unique
   usuarios Usuario[]
 
   @@map("roles")
 }
 
-// Asignación de un docente a una sección (sin materia)
 model AsignacionDocente {
   idAsignacion   Int @id @default(autoincrement())
   idDocente      String
@@ -101,7 +118,6 @@ model AsignacionDocente {
   docente      Personal     @relation(fields: [idDocente], references: [idPersonal], onDelete: Cascade)
   gradoSeccion GradoSeccion @relation(fields: [idGradoSeccion], references: [idGradoSeccion], onDelete: Cascade)
 
-  // Unicidad: evitar duplicados (mismo docente, misma sección)
   @@unique([idDocente, idGradoSeccion])
   @@map("asignaciones_docentes")
 }
@@ -114,7 +130,7 @@ model Inscripcion {
   idInscripcion    Int      @id @default(autoincrement()) @map("id_inscripcion")
   idAlumno         String   @map("id_alumno")
   idGradoSeccion   Int      @map("id_grado_seccion")
-  añoEscolar       String   @map("año_escolar")
+  anioEscolar      String   @map("anio_escolar")
   fechaInscripcion DateTime @default(now()) @map("fecha_inscripcion") @db.Date
 
   alumno      Alumno      @relation(fields: [idAlumno], references: [idAlumno], onDelete: Cascade)
@@ -126,15 +142,14 @@ model Inscripcion {
 }
 
 model EvaluacionCualitativa {
-  idEvaluacion          Int      @id @default(autoincrement()) @map("id_evaluacion")
-  idInscripcion         Int      @map("id_inscripcion")
-  lapso                 Int      // 1, 2, 3
-  literalCalificacion   String   @map("literal_calificacion")
-  apreciacionDescriptiva String? @db.Text @map("apreciacion_descriptiva")
+  idEvaluacion           Int      @id @default(autoincrement()) @map("id_evaluacion")
+  idInscripcion          Int      @map("id_inscripcion")
+  lapso                  Int
+  literalCalificacion    String   @map("literal_calificacion")
+  apreciacionDescriptiva String?  @db.Text @map("apreciacion_descriptiva")
 
   inscripcion Inscripcion @relation(fields: [idInscripcion], references: [idInscripcion], onDelete: Cascade)
 
-  // Unicidad: una sola nota por inscripción y lapso
   @@unique([idInscripcion, lapso])
   @@map("evaluaciones_cualitativas")
 }

@@ -1,5 +1,5 @@
 // app/actions/alumnos.js
-'use server'
+'use server';
 
 import { Pool } from "pg";
 import { PrismaPg } from "@prisma/adapter-pg";
@@ -14,14 +14,19 @@ const prisma = new PrismaClient({ adapter });
 
 export async function obtenerMatriculaGeneral() {
   try {
+    // Obtener todas las inscripciones del año escolar actual (sin tilde)
     const inscripciones = await prisma.inscripcion.findMany({
       where: {
-        añoEscolar: "2025-2026" // ✅ con tilde
+        anioEscolar: "2025-2026" // ✅ Ahora sin tilde: anioEscolar
       },
       include: {
         alumno: {
           include: {
-            representante: true
+            representante: {
+              include: {
+                telefonos: true // ✅ Incluir la nueva tabla de teléfonos
+              }
+            }
           }
         },
         gradoSeccion: true
@@ -31,19 +36,30 @@ export async function obtenerMatriculaGeneral() {
       }
     });
 
-    return inscripciones.map(i => ({
-      idInscripcion: i.idInscripcion,
-      cedulaEscolar: i.alumno.idAlumno,
-      nombreAlumno: `${i.alumno.apellido}, ${i.alumno.nombre}`,
-      gradoSeccion: `${i.gradoSeccion.grado} - ${i.gradoSeccion.seccion}`, // ✅ corregido
-      representante: `${i.alumno.representante.apellido}, ${i.alumno.representante.nombre}`,
-      cedulaRep: i.alumno.representante.idRepresentante,
-      telefonoRep: i.alumno.representante.telefono || 'Sin teléfono',
-      // ✅ Eliminado expediente (ya no existe)
-    }));
+    // Mapear los datos al formato que espera el frontend
+    return inscripciones.map(i => {
+      const alumno = i.alumno;
+      const rep = alumno.representante;
+      // Obtener el teléfono principal o el primero
+      const telefonoPrincipal = rep.telefonos?.find(t => t.esPrincipal)?.numero
+        || rep.telefonos?.[0]?.numero
+        || 'Sin teléfono';
+
+      return {
+        idAlumno: alumno.idAlumno, // ✅ Campo esperado por la página
+        nombreAlumno: `${alumno.apellido}, ${alumno.nombre}`,
+        gradoSeccion: `${i.gradoSeccion.grado}° Grado - Sección "${i.gradoSeccion.seccion}"`,
+        representante: `${rep.apellido}, ${rep.nombre}`,
+        cedulaRep: rep.idRepresentante,
+        telefonoRep: telefonoPrincipal,
+        discapacidad: alumno.discapacidad || '',
+        alergias: alumno.alergias || '',
+        telefonos: rep.telefonos, // Opcional, por si se quiere mostrar todos
+      };
+    });
 
   } catch (error) {
     console.error("❌ Error al consultar la matrícula general:", error);
-    return [];
+    return []; // Devuelve un array vacío para que la página no explote
   }
 }
